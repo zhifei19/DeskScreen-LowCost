@@ -11,6 +11,9 @@
 #include "freertos/task.h"
 #include "esp_chip_info.h"
 #include "esp_flash.h"
+#include "esp_log.h"
+
+static const char *TAG = "MAIN APP";
 
 void app_main(void)
 {
@@ -45,6 +48,9 @@ void app_main(void)
         printf("Restarting in %d seconds...\n", i);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
+
+    ESP_LOGI(TAG, "Desktop Screen V1.1");
+
     printf("Restarting now.\n");
     fflush(stdout);
     esp_restart();
