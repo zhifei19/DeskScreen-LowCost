@@ -15,6 +15,18 @@
 
 static const char *TAG = "MAIN APP";
 
+#define tsk1_PRIORITY    10
+#define STACK_SIZE          2048
+
+void vTaskCode(void *pvParameters)
+{
+    for(;;)
+    {
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        printf("task 1 run... \n");
+    }
+}
+
 void app_main(void)
 {
     printf("Hello world!\n");
@@ -44,14 +56,13 @@ void app_main(void)
 
     printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
 
-    for (int i = 10; i >= 0; i--) {
-        printf("Restarting in %d seconds...\n", i);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
-
     ESP_LOGI(TAG, "Desktop Screen V1.1");
 
-    printf("Restarting now.\n");
-    fflush(stdout);
-    esp_restart();
+    xTaskCreate(vTaskCode, "NAME", STACK_SIZE, NULL, tsk1_PRIORITY, NULL);
+
+    while(1)
+    {
+        printf("System run...\n");
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
 }
