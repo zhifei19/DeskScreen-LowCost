@@ -13,6 +13,8 @@
 #include "esp_flash.h"
 #include "esp_log.h"
 
+#include "ds_timer.h"
+
 static const char *TAG = "MAIN APP";
 
 #define tsk1_PRIORITY    10
@@ -59,6 +61,8 @@ void app_main(void)
     ESP_LOGI(TAG, "Desktop Screen V1.1");
 
     xTaskCreate(vTaskCode, "NAME", STACK_SIZE, NULL, tsk1_PRIORITY, NULL);
+
+    ds_timer_init();
 
     while(1)
     {
