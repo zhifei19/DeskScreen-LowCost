@@ -14,6 +14,7 @@
 #include "esp_log.h"
 
 #include "ds_timer.h"
+#include "ds_spiffs.h"
 
 static const char *TAG = "MAIN APP";
 
@@ -63,6 +64,10 @@ void app_main(void)
     xTaskCreate(vTaskCode, "NAME", STACK_SIZE, NULL, tsk1_PRIORITY, NULL);
 
     ds_timer_init();
+
+    spiffs_init();
+
+    spiffs_test();
 
     while(1)
     {
