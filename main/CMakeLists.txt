@@ -1,11 +1,14 @@
 idf_component_register(SRCS 
                             "app_main.c"
                             "src/hal/ds_timer.c"
+                            "src/hal/ds_nvs.c"
                             "src/fs/ds_spiffs.c"
+                            "src/ds_system_data.c"
                     INCLUDE_DIRS 
                             "."
                             "./include/hal"
-                            "./include/fs")
+                            "./include/fs"
+                            "./include")
 
 # Create a SPIFFS image from the contents of the 'spiffs_image' directory
 # that fits the partition named 'storage'. FLASH_IN_PROJECT indicates that

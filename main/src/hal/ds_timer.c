@@ -11,7 +11,7 @@
 #include "driver/gptimer.h"
 #include "esp_log.h"
 
-static const char *TAG = "example";
+static const char *TAG = "ds_timer";
 
 typedef struct {
     uint64_t event_count;

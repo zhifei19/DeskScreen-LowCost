@@ -15,6 +15,8 @@
 
 #include "ds_timer.h"
 #include "ds_spiffs.h"
+#include "ds_nvs.h"
+#include "ds_system_data.h"
 
 static const char *TAG = "MAIN APP";
 
@@ -66,8 +68,17 @@ void app_main(void)
     ds_timer_init();
 
     spiffs_init();
-
     spiffs_test();
+    spiffs_deinit();
+
+    char *ssid = "123";
+    char *password = "456";
+    sysdata_set_wifi_info(ssid, strlen(ssid), password, strlen(password));
+    printf("main ssid is: %s, password is: %s\n",ssid,password);
+    printf("main ssid len is:%d\n,password len is:%d\n",(int)strlen(ssid),(int)strlen(password));
+    nvs_init();
+    nvs_save_data();
+    nvs_read_data();
 
     while(1)
     {
