@@ -47,9 +47,6 @@ NVS_WIFI_INFO_E nvs_read_data(void)
         size_t password_len = sizeof(local_password);
         ESP_ERROR_CHECK(nvs_get_str(my_handle, "SSID", local_ssid,&ssid_len));
         ESP_ERROR_CHECK(nvs_get_str(my_handle, "Password", local_password,&password_len));
-        printf("nvs_read_data ssid:%s\n",local_ssid);
-        printf("nvs_read_data password:%s\n",local_ssid);
-        printf("ssid len is:%d\n,password len is:%d\n",(int)ssid_len,(int)password_len);
         ssid_len--;
         password_len--;
         sysdata_set_wifi_info(local_ssid, ssid_len, local_password, password_len);

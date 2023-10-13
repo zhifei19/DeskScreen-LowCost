@@ -17,6 +17,7 @@
 #include "ds_spiffs.h"
 #include "ds_nvs.h"
 #include "ds_system_data.h"
+#include "ds_gpio.h"
 
 static const char *TAG = "MAIN APP";
 
@@ -65,7 +66,7 @@ void app_main(void)
 
     xTaskCreate(vTaskCode, "NAME", STACK_SIZE, NULL, tsk1_PRIORITY, NULL);
 
-    ds_timer_init();
+    // ds_timer_init();
 
     spiffs_init();
     spiffs_test();
@@ -80,9 +81,18 @@ void app_main(void)
     nvs_save_data();
     nvs_read_data();
 
+    gpio_screen_init();
+    gpio_tp_init();
+
+    int i=0;
+
     while(1)
     {
+        gpio_set_screen_cs(i%2);
+        gpio_set_tp_rst(i%2);
         printf("System run...\n");
         vTaskDelay(1000 / portTICK_PERIOD_MS);
+        i++;
+        if(i == 100)    i=0;
     }
 }

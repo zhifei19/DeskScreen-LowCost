@@ -27,12 +27,6 @@ void sysdata_set_wifi_info(char *p_ssid, uint32_t p_ssidlen, char *p_password, u
     memcpy(sysdata_handler.password,p_password,p_passwordlen);
     sysdata_handler.ssid[p_ssidlen] = '\0';
     sysdata_handler.password[p_passwordlen] = '\0';
-    printf("sysdata_set_wifi_info ssid len is:%d\n,password len is:%d\n",(int)p_ssidlen,(int)p_passwordlen);
-    printf("sysdata_set_wifi_info sysdata ssid len is:%d\n,sysdata password len is:%d\n",(int)sysdata_handler.ssid_len,(int)sysdata_handler.password_len);
-    printf("sysdata_set_wifi_info strlen ssid:%d\n",strlen(sysdata_handler.ssid));
-    printf("sysdata_set_wifi_info strlen password:%d\n",strlen(sysdata_handler.password));
-    printf("sysdata_set_wifi_info ssid:%s\n",sysdata_handler.ssid);
-    printf("sysdata_set_wifi_info password:%s\n",sysdata_handler.password);
     ESP_LOGI(TAG,"SYSTEM DATA WRITTEN DONE");
 }
 
@@ -44,7 +38,6 @@ void sysdata_print_wifi_info()
     ESP_LOGI(TAG,"WIFI Password:");
     printf("\r\nwifi_Password:");
     printf("%s\n",sysdata_handler.password);
-    printf("ssid len is:%d\n,password len is:%d\n",(int)sysdata_handler.ssid_len,(int)sysdata_handler.password_len);
     printf("\r\n");
 }
 

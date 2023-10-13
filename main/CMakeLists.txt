@@ -2,6 +2,7 @@ idf_component_register(SRCS
                             "app_main.c"
                             "src/hal/ds_timer.c"
                             "src/hal/ds_nvs.c"
+                            "src/hal/ds_gpio.c"
                             "src/fs/ds_spiffs.c"
                             "src/ds_system_data.c"
                     INCLUDE_DIRS 
