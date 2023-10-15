@@ -18,6 +18,7 @@
 #include "ds_nvs.h"
 #include "ds_system_data.h"
 #include "ds_gpio.h"
+#include "ds_ft6336.h"
 
 static const char *TAG = "MAIN APP";
 
@@ -84,12 +85,13 @@ void app_main(void)
     gpio_screen_init();
     gpio_tp_init();
 
+    ft6336_init();
+
     int i=0;
 
     while(1)
     {
-        gpio_set_screen_cs(i%2);
-        gpio_set_tp_rst(i%2);
+        ft6336_task();
         printf("System run...\n");
         vTaskDelay(1000 / portTICK_PERIOD_MS);
         i++;

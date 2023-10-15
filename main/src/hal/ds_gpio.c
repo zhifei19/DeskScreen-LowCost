@@ -9,6 +9,7 @@
 #include "esp_log.h"
 
 #include "ds_gpio.h"
+#include "ds_ft6336.h"
 
 static const char *TAG = "ds_gpio";
 
@@ -45,10 +46,12 @@ static const char *TAG = "ds_gpio";
 
 static QueueHandle_t gpio_evt_queue = NULL;
 
-static void IRAM_ATTR gpio_isr_handler(void* arg)
+static void IRAM_ATTR tp_isr_handler(void* arg)
 {
     uint32_t gpio_num = (uint32_t) arg;
     xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
+
+    TPR_Structure.TouchSta |= TP_COORD_UD;				//触摸坐标有更新
 }
 
 static void IRAM_ATTR screen_isr_handler(void* arg)
@@ -105,7 +108,7 @@ void gpio_tp_init(void)
     //install gpio isr service
     gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
     //hook isr handler for specific gpio pin
-    gpio_isr_handler_add(TP_GPIO_INPUT_INT, gpio_isr_handler, (void*) TP_GPIO_INPUT_INT);
+    gpio_isr_handler_add(TP_GPIO_INPUT_INT, tp_isr_handler, (void*) TP_GPIO_INPUT_INT);
     ESP_LOGI(TAG,"GPIO TP INIT");
 }
 
