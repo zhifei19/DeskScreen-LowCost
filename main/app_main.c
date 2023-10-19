@@ -20,6 +20,7 @@
 #include "ds_gpio.h"
 #include "ds_ft6336.h"
 #include "ds_screen.h"
+#include "ds_wifi_ap.h"
 
 static const char *TAG = "MAIN APP";
 
@@ -83,16 +84,18 @@ void app_main(void)
     nvs_save_data();
     nvs_read_data();
 
-    gpio_screen_init();
-    gpio_tp_init();
+    wifi_init_softap();
 
-    ft6336_init();
-    EPD_interface_init();
+    // gpio_screen_init();
+    // gpio_tp_init();
+
+    // ft6336_init();
+    // EPD_interface_init();
 
     while(1)
     {
-        ft6336_task();
-        EPD_selftest();
+        // ft6336_task();
+        // EPD_selftest();
 
         printf("System run...\n");
 

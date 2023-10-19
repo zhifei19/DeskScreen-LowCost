@@ -12,6 +12,8 @@ idf_component_register(SRCS
                             
                             "src/fs/ds_spiffs.c"
 
+                            "src/net/ds_wifi_ap.c"
+
                             "src/ds_system_data.c"
                     INCLUDE_DIRS 
                             "."
@@ -19,6 +21,7 @@ idf_component_register(SRCS
                             "./include/fs"
                             "./include/driver"
                             "./include/data"
+                            "./include/net"
                             "./include")
 
 # Create a SPIFFS image from the contents of the 'spiffs_image' directory
