@@ -21,6 +21,7 @@
 #include "ds_ft6336.h"
 #include "ds_screen.h"
 #include "ds_wifi_ap.h"
+#include "ds_http_server.h"
 
 static const char *TAG = "MAIN APP";
 
@@ -32,7 +33,7 @@ void vTaskCode(void *pvParameters)
     for(;;)
     {
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-        printf("task 1 run... \n");
+        // printf("task 1 run... \n");
     }
 }
 
@@ -85,6 +86,7 @@ void app_main(void)
     nvs_read_data();
 
     wifi_init_softap();
+    http_server_init();
 
     // gpio_screen_init();
     // gpio_tp_init();

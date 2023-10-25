@@ -13,6 +13,7 @@ idf_component_register(SRCS
                             "src/fs/ds_spiffs.c"
 
                             "src/net/ds_wifi_ap.c"
+                            "src/net/ds_http_server.c"
 
                             "src/ds_system_data.c"
                     INCLUDE_DIRS 
