@@ -1,451 +1,497 @@
+#include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <esp_log.h>
-#include <nvs_flash.h>
 #include <sys/param.h>
-#include "esp_netif.h"
-#include "esp_tls_crypto.h"
-#include <esp_http_server.h>
-#include "esp_event.h"
-#include "esp_netif.h"
-#include "esp_tls.h"
+#include <sys/unistd.h>
+#include <sys/stat.h>
+#include <dirent.h>
 
-#include "ds_http_server.h"
+#include "esp_err.h"
+#include "esp_log.h"
 
-#if !CONFIG_IDF_TARGET_LINUX
-#include <esp_wifi.h>
-#include <esp_system.h>
-#include "nvs_flash.h"
-#include "esp_eth.h"
-#endif  // !CONFIG_IDF_TARGET_LINUX
+#include "esp_vfs.h"
+#include "esp_spiffs.h"
+#include "esp_http_server.h"
 
-#define EXAMPLE_HTTP_QUERY_KEY_MAX_LEN  (64)
+/* Max length a file path can have on storage */
+#define FILE_PATH_MAX (ESP_VFS_PATH_MAX + CONFIG_SPIFFS_OBJ_NAME_LEN)
 
-/* A simple example that demonstrates how to create GET and POST
- * handlers for the web server.
- */
+/* Max size of an individual file. Make sure this
+ * value is same as that set in upload_script.html */
+#define MAX_FILE_SIZE   (200*1024) // 200 KB
+#define MAX_FILE_SIZE_STR "200KB"
+
+/* Scratch buffer size */
+#define SCRATCH_BUFSIZE  8192
+
+struct file_server_data {
+    /* Base path of file storage */
+    char base_path[ESP_VFS_PATH_MAX + 1];
+
+    /* Scratch buffer for temporary storage during file transfer */
+    char scratch[SCRATCH_BUFSIZE];
+};
 
 static const char *TAG = "ds_http_server";
 
-#if CONFIG_EXAMPLE_BASIC_AUTH
-
-typedef struct {
-    char    *username;
-    char    *password;
-} basic_auth_info_t;
-
-#define HTTPD_401      "401 UNAUTHORIZED"           /*!< HTTP Response 401 */
-
-static char *http_auth_basic(const char *username, const char *password)
+/* Handler to redirect incoming GET request for /index.html to /
+ * This can be overridden by uploading file with same name */
+static esp_err_t index_html_get_handler(httpd_req_t *req)
 {
-    size_t out;
-    char *user_info = NULL;
-    char *digest = NULL;
-    size_t n = 0;
-    int rc = asprintf(&user_info, "%s:%s", username, password);
-    if (rc < 0) {
-        ESP_LOGE(TAG, "asprintf() returned: %d", rc);
-        return NULL;
-    }
-
-    if (!user_info) {
-        ESP_LOGE(TAG, "No enough memory for user information");
-        return NULL;
-    }
-    esp_crypto_base64_encode(NULL, 0, &n, (const unsigned char *)user_info, strlen(user_info));
-
-    /* 6: The length of the "Basic " string
-     * n: Number of bytes for a base64 encode format
-     * 1: Number of bytes for a reserved which be used to fill zero
-    */
-    digest = calloc(1, 6 + n + 1);
-    if (digest) {
-        strcpy(digest, "Basic ");
-        esp_crypto_base64_encode((unsigned char *)digest + 6, n, &out, (const unsigned char *)user_info, strlen(user_info));
-    }
-    free(user_info);
-    return digest;
-}
-
-/* An HTTP GET handler */
-static esp_err_t basic_auth_get_handler(httpd_req_t *req)
-{
-    char *buf = NULL;
-    size_t buf_len = 0;
-    basic_auth_info_t *basic_auth_info = req->user_ctx;
-
-    buf_len = httpd_req_get_hdr_value_len(req, "Authorization") + 1;
-    if (buf_len > 1) {
-        buf = calloc(1, buf_len);
-        if (!buf) {
-            ESP_LOGE(TAG, "No enough memory for basic authorization");
-            return ESP_ERR_NO_MEM;
-        }
-
-        if (httpd_req_get_hdr_value_str(req, "Authorization", buf, buf_len) == ESP_OK) {
-            ESP_LOGI(TAG, "Found header => Authorization: %s", buf);
-        } else {
-            ESP_LOGE(TAG, "No auth value received");
-        }
-
-        char *auth_credentials = http_auth_basic(basic_auth_info->username, basic_auth_info->password);
-        if (!auth_credentials) {
-            ESP_LOGE(TAG, "No enough memory for basic authorization credentials");
-            free(buf);
-            return ESP_ERR_NO_MEM;
-        }
-
-        if (strncmp(auth_credentials, buf, buf_len)) {
-            ESP_LOGE(TAG, "Not authenticated");
-            httpd_resp_set_status(req, HTTPD_401);
-            httpd_resp_set_type(req, "application/json");
-            httpd_resp_set_hdr(req, "Connection", "keep-alive");
-            httpd_resp_set_hdr(req, "WWW-Authenticate", "Basic realm=\"Hello\"");
-            httpd_resp_send(req, NULL, 0);
-        } else {
-            ESP_LOGI(TAG, "Authenticated!");
-            char *basic_auth_resp = NULL;
-            httpd_resp_set_status(req, HTTPD_200);
-            httpd_resp_set_type(req, "application/json");
-            httpd_resp_set_hdr(req, "Connection", "keep-alive");
-            int rc = asprintf(&basic_auth_resp, "{\"authenticated\": true,\"user\": \"%s\"}", basic_auth_info->username);
-            if (rc < 0) {
-                ESP_LOGE(TAG, "asprintf() returned: %d", rc);
-                free(auth_credentials);
-                return ESP_FAIL;
-            }
-            if (!basic_auth_resp) {
-                ESP_LOGE(TAG, "No enough memory for basic authorization response");
-                free(auth_credentials);
-                free(buf);
-                return ESP_ERR_NO_MEM;
-            }
-            httpd_resp_send(req, basic_auth_resp, strlen(basic_auth_resp));
-            free(basic_auth_resp);
-        }
-        free(auth_credentials);
-        free(buf);
-    } else {
-        ESP_LOGE(TAG, "No auth header received");
-        httpd_resp_set_status(req, HTTPD_401);
-        httpd_resp_set_type(req, "application/json");
-        httpd_resp_set_hdr(req, "Connection", "keep-alive");
-        httpd_resp_set_hdr(req, "WWW-Authenticate", "Basic realm=\"Hello\"");
-        httpd_resp_send(req, NULL, 0);
-    }
-
+    httpd_resp_set_status(req, "307 Temporary Redirect");
+    httpd_resp_set_hdr(req, "Location", "/");
+    httpd_resp_send(req, NULL, 0);  // Response body can be empty
     return ESP_OK;
 }
 
-static httpd_uri_t basic_auth = {
-    .uri       = "/basic_auth",
-    .method    = HTTP_GET,
-    .handler   = basic_auth_get_handler,
-};
-
-static void httpd_register_basic_auth(httpd_handle_t server)
+/* Handler to respond with an icon file embedded in flash.
+ * Browsers expect to GET website icon at URI /favicon.ico.
+ * This can be overridden by uploading file with same name */
+static esp_err_t favicon_get_handler(httpd_req_t *req)
 {
-    basic_auth_info_t *basic_auth_info = calloc(1, sizeof(basic_auth_info_t));
-    if (basic_auth_info) {
-        basic_auth_info->username = CONFIG_EXAMPLE_BASIC_AUTH_USERNAME;
-        basic_auth_info->password = CONFIG_EXAMPLE_BASIC_AUTH_PASSWORD;
-
-        basic_auth.user_ctx = basic_auth_info;
-        httpd_register_uri_handler(server, &basic_auth);
-    }
+    extern const unsigned char favicon_ico_start[] asm("_binary_favicon_ico_start");
+    extern const unsigned char favicon_ico_end[]   asm("_binary_favicon_ico_end");
+    const size_t favicon_ico_size = (favicon_ico_end - favicon_ico_start);
+    httpd_resp_set_type(req, "image/x-icon");
+    httpd_resp_send(req, (const char *)favicon_ico_start, favicon_ico_size);
+    return ESP_OK;
 }
+
+/* Send HTTP response with a run-time generated html consisting of
+ * a list of all files and folders under the requested path.
+ * In case of SPIFFS this returns empty list when path is any
+ * string other than '/', since SPIFFS doesn't support directories */
+static esp_err_t http_resp_dir_html(httpd_req_t *req, const char *dirpath)
+{
+    char entrypath[FILE_PATH_MAX];
+    char entrysize[16];
+    const char *entrytype;
+
+    struct dirent *entry;
+    struct stat entry_stat;
+
+    DIR *dir = opendir(dirpath);
+    const size_t dirpath_len = strlen(dirpath);
+
+    /* Retrieve the base path of file storage to construct the full path */
+    strlcpy(entrypath, dirpath, sizeof(entrypath));
+
+    if (!dir) {
+        ESP_LOGE(TAG, "Failed to stat dir : %s", dirpath);
+        /* Respond with 404 Not Found */
+        httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Directory does not exist");
+        return ESP_FAIL;
+    }
+
+    /* Send HTML file header */
+    httpd_resp_sendstr_chunk(req, "<!DOCTYPE html><html><body>");
+
+    /* Get handle to embedded file upload script */
+    extern const unsigned char upload_script_start[] asm("_binary_upload_script_html_start");
+    extern const unsigned char upload_script_end[]   asm("_binary_upload_script_html_end");
+    const size_t upload_script_size = (upload_script_end - upload_script_start);
+
+    /* Add file upload form and script which on execution sends a POST request to /upload */
+    httpd_resp_send_chunk(req, (const char *)upload_script_start, upload_script_size);
+
+    /* Send file-list table definition and column labels */
+    httpd_resp_sendstr_chunk(req,
+        "<table class=\"fixed\" border=\"1\">"
+        "<col width=\"800px\" /><col width=\"300px\" /><col width=\"300px\" /><col width=\"100px\" />"
+        "<thead><tr><th>Name</th><th>Type</th><th>Size (Bytes)</th><th>Delete</th></tr></thead>"
+        "<tbody>");
+
+    /* Iterate over all files / folders and fetch their names and sizes */
+    while ((entry = readdir(dir)) != NULL) {
+        entrytype = (entry->d_type == DT_DIR ? "directory" : "file");
+
+        strlcpy(entrypath + dirpath_len, entry->d_name, sizeof(entrypath) - dirpath_len);
+        if (stat(entrypath, &entry_stat) == -1) {
+            ESP_LOGE(TAG, "Failed to stat %s : %s", entrytype, entry->d_name);
+            continue;
+        }
+        sprintf(entrysize, "%ld", entry_stat.st_size);
+        ESP_LOGI(TAG, "Found %s : %s (%s bytes)", entrytype, entry->d_name, entrysize);
+
+        /* Send chunk of HTML file containing table entries with file name and size */
+        httpd_resp_sendstr_chunk(req, "<tr><td><a href=\"");
+        httpd_resp_sendstr_chunk(req, req->uri);
+        httpd_resp_sendstr_chunk(req, entry->d_name);
+        if (entry->d_type == DT_DIR) {
+            httpd_resp_sendstr_chunk(req, "/");
+        }
+        httpd_resp_sendstr_chunk(req, "\">");
+        httpd_resp_sendstr_chunk(req, entry->d_name);
+        httpd_resp_sendstr_chunk(req, "</a></td><td>");
+        httpd_resp_sendstr_chunk(req, entrytype);
+        httpd_resp_sendstr_chunk(req, "</td><td>");
+        httpd_resp_sendstr_chunk(req, entrysize);
+        httpd_resp_sendstr_chunk(req, "</td><td>");
+        httpd_resp_sendstr_chunk(req, "<form method=\"post\" action=\"/delete");
+        httpd_resp_sendstr_chunk(req, req->uri);
+        httpd_resp_sendstr_chunk(req, entry->d_name);
+        httpd_resp_sendstr_chunk(req, "\"><button type=\"submit\">Delete</button></form>");
+        httpd_resp_sendstr_chunk(req, "</td></tr>\n");
+    }
+    closedir(dir);
+
+    /* Finish the file list table */
+    httpd_resp_sendstr_chunk(req, "</tbody></table>");
+
+    /* Send remaining chunk of HTML file to complete it */
+    httpd_resp_sendstr_chunk(req, "</body></html>");
+
+    /* Send empty chunk to signal HTTP response completion */
+    httpd_resp_sendstr_chunk(req, NULL);
+    return ESP_OK;
+}
+
+#define IS_FILE_EXT(filename, ext) \
+    (strcasecmp(&filename[strlen(filename) - sizeof(ext) + 1], ext) == 0)
+
+/* Set HTTP response content type according to file extension */
+static esp_err_t set_content_type_from_file(httpd_req_t *req, const char *filename)
+{
+    if (IS_FILE_EXT(filename, ".pdf")) {
+        return httpd_resp_set_type(req, "application/pdf");
+    } else if (IS_FILE_EXT(filename, ".html")) {
+        return httpd_resp_set_type(req, "text/html");
+    } else if (IS_FILE_EXT(filename, ".jpeg")) {
+        return httpd_resp_set_type(req, "image/jpeg");
+    } else if (IS_FILE_EXT(filename, ".ico")) {
+        return httpd_resp_set_type(req, "image/x-icon");
+    }
+    /* This is a limited set only */
+    /* For any other type always set as plain text */
+    return httpd_resp_set_type(req, "text/plain");
+}
+
+/* Copies the full path into destination buffer and returns
+ * pointer to path (skipping the preceding base path) */
+static const char* get_path_from_uri(char *dest, const char *base_path, const char *uri, size_t destsize)
+{
+    const size_t base_pathlen = strlen(base_path);
+    size_t pathlen = strlen(uri);
+
+    const char *quest = strchr(uri, '?');
+    if (quest) {
+        pathlen = MIN(pathlen, quest - uri);
+    }
+    const char *hash = strchr(uri, '#');
+    if (hash) {
+        pathlen = MIN(pathlen, hash - uri);
+    }
+
+    if (base_pathlen + pathlen + 1 > destsize) {
+        /* Full path string won't fit into destination buffer */
+        return NULL;
+    }
+
+    /* Construct full path (base + path) */
+    strcpy(dest, base_path);
+    strlcpy(dest + base_pathlen, uri, pathlen + 1);
+
+    /* Return pointer to path, skipping the base */
+    return dest + base_pathlen;
+}
+
+/* Handler to download a file kept on the server */
+static esp_err_t download_get_handler(httpd_req_t *req)
+{
+    char filepath[FILE_PATH_MAX];
+    FILE *fd = NULL;
+    struct stat file_stat;
+
+    const char *filename = get_path_from_uri(filepath, ((struct file_server_data *)req->user_ctx)->base_path,
+                                             req->uri, sizeof(filepath));
+    if (!filename) {
+        ESP_LOGE(TAG, "Filename is too long");
+        /* Respond with 500 Internal Server Error */
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Filename too long");
+        return ESP_FAIL;
+    }
+
+    /* If name has trailing '/', respond with directory contents */
+    if (filename[strlen(filename) - 1] == '/') {
+        return http_resp_dir_html(req, filepath);
+    }
+
+    if (stat(filepath, &file_stat) == -1) {
+        /* If file not present on SPIFFS check if URI
+         * corresponds to one of the hardcoded paths */
+        if (strcmp(filename, "/index.html") == 0) {
+            return index_html_get_handler(req);
+        } else if (strcmp(filename, "/favicon.ico") == 0) {
+            return favicon_get_handler(req);
+        }
+        ESP_LOGE(TAG, "Failed to stat file : %s", filepath);
+        /* Respond with 404 Not Found */
+        httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "File does not exist");
+        return ESP_FAIL;
+    }
+
+    fd = fopen(filepath, "r");
+    if (!fd) {
+        ESP_LOGE(TAG, "Failed to read existing file : %s", filepath);
+        /* Respond with 500 Internal Server Error */
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to read existing file");
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI(TAG, "Sending file : %s (%ld bytes)...", filename, file_stat.st_size);
+    set_content_type_from_file(req, filename);
+
+    /* Retrieve the pointer to scratch buffer for temporary storage */
+    char *chunk = ((struct file_server_data *)req->user_ctx)->scratch;
+    size_t chunksize;
+    do {
+        /* Read file in chunks into the scratch buffer */
+        chunksize = fread(chunk, 1, SCRATCH_BUFSIZE, fd);
+
+        if (chunksize > 0) {
+            /* Send the buffer contents as HTTP response chunk */
+            if (httpd_resp_send_chunk(req, chunk, chunksize) != ESP_OK) {
+                fclose(fd);
+                ESP_LOGE(TAG, "File sending failed!");
+                /* Abort sending file */
+                httpd_resp_sendstr_chunk(req, NULL);
+                /* Respond with 500 Internal Server Error */
+                httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to send file");
+               return ESP_FAIL;
+           }
+        }
+
+        /* Keep looping till the whole file is sent */
+    } while (chunksize != 0);
+
+    /* Close file after sending complete */
+    fclose(fd);
+    ESP_LOGI(TAG, "File sending complete");
+
+    /* Respond with an empty chunk to signal HTTP response completion */
+#ifdef CONFIG_EXAMPLE_HTTPD_CONN_CLOSE_HEADER
+    httpd_resp_set_hdr(req, "Connection", "close");
 #endif
-
-/* An HTTP GET handler */
-static esp_err_t hello_get_handler(httpd_req_t *req)
-{
-    // char*  buf;
-    // size_t buf_len;
-
-    // /* Get header value string length and allocate memory for length + 1,
-    //  * extra byte for null termination */
-    // buf_len = httpd_req_get_hdr_value_len(req, "Host") + 1;
-    // if (buf_len > 1) {
-    //     buf = malloc(buf_len);
-    //     /* Copy null terminated value string into buffer */
-    //     if (httpd_req_get_hdr_value_str(req, "Host", buf, buf_len) == ESP_OK) {
-    //         ESP_LOGI(TAG, "Found header => Host: %s", buf);
-    //     }
-    //     free(buf);
-    // }
-
-    // buf_len = httpd_req_get_hdr_value_len(req, "Test-Header-2") + 1;
-    // if (buf_len > 1) {
-    //     buf = malloc(buf_len);
-    //     if (httpd_req_get_hdr_value_str(req, "Test-Header-2", buf, buf_len) == ESP_OK) {
-    //         ESP_LOGI(TAG, "Found header => Test-Header-2: %s", buf);
-    //     }
-    //     free(buf);
-    // }
-
-    // buf_len = httpd_req_get_hdr_value_len(req, "Test-Header-1") + 1;
-    // if (buf_len > 1) {
-    //     buf = malloc(buf_len);
-    //     if (httpd_req_get_hdr_value_str(req, "Test-Header-1", buf, buf_len) == ESP_OK) {
-    //         ESP_LOGI(TAG, "Found header => Test-Header-1: %s", buf);
-    //     }
-    //     free(buf);
-    // }
-
-    // /* Read URL query string length and allocate memory for length + 1,
-    //  * extra byte for null termination */
-    // buf_len = httpd_req_get_url_query_len(req) + 1;
-    // if (buf_len > 1) {
-    //     buf = malloc(buf_len);
-    //     if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
-    //         ESP_LOGI(TAG, "Found URL query => %s", buf);
-    //         char param[EXAMPLE_HTTP_QUERY_KEY_MAX_LEN], dec_param[EXAMPLE_HTTP_QUERY_KEY_MAX_LEN] = {0};
-    //         /* Get value of expected key from query string */
-    //         if (httpd_query_key_value(buf, "query1", param, sizeof(param)) == ESP_OK) {
-    //             ESP_LOGI(TAG, "Found URL query parameter => query1=%s", param);
-    //         }
-    //         if (httpd_query_key_value(buf, "query3", param, sizeof(param)) == ESP_OK) {
-    //             ESP_LOGI(TAG, "Found URL query parameter => query3=%s", param);
-    //         }
-    //         if (httpd_query_key_value(buf, "query2", param, sizeof(param)) == ESP_OK) {
-    //             ESP_LOGI(TAG, "Found URL query parameter => query2=%s", param);
-    //             // example_uri_decode(dec_param, param, strnlen(param, EXAMPLE_HTTP_QUERY_KEY_MAX_LEN));
-    //             // ESP_LOGI(TAG, "Decoded query parameter => %s", dec_param);
-    //         }
-    //     }
-    //     free(buf);
-    // }
-
-    // /* Set some custom headers */
-    // httpd_resp_set_hdr(req, "Custom-Header-1", "Custom-Value-1");
-    // httpd_resp_set_hdr(req, "Custom-Header-2", "Custom-Value-2");
-
-    /* Send response with custom headers and body set as the
-     * string passed in user context*/
-    const char* resp_str = (const char*) req->user_ctx;
-    httpd_resp_send(req, resp_str, HTTPD_RESP_USE_STRLEN);
-
-    // /* After sending the HTTP response the old HTTP request
-    //  * headers are lost. Check if HTTP request headers can be read now. */
-    // if (httpd_req_get_hdr_value_len(req, "Host") == 0) {
-    //     ESP_LOGI(TAG, "Request headers lost");
-    // }
-    return ESP_OK;
-}
-
-static const httpd_uri_t hello = {
-    .uri       = "/hello",
-    .method    = HTTP_GET,
-    .handler   = hello_get_handler,
-    /* Let's pass response string in user
-     * context to demonstrate it's usage */
-    .user_ctx  = "Hello World!"
-};
-
-/* An HTTP POST handler */
-static esp_err_t echo_post_handler(httpd_req_t *req)
-{
-    char buf[100];
-    int ret, remaining = req->content_len;
-
-    while (remaining > 0) {
-        /* Read the data for the request */
-        if ((ret = httpd_req_recv(req, buf,
-                        MIN(remaining, sizeof(buf)))) <= 0) {
-            if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
-                /* Retry receiving if timeout occurred */
-                continue;
-            }
-            return ESP_FAIL;
-        }
-
-        /* Send back the same data */
-        httpd_resp_send_chunk(req, buf, ret);
-        remaining -= ret;
-
-        /* Log data received */
-        ESP_LOGI(TAG, "=========== RECEIVED DATA ==========");
-        ESP_LOGI(TAG, "%.*s", ret, buf);
-        ESP_LOGI(TAG, "====================================");
-    }
-
-    // End response
     httpd_resp_send_chunk(req, NULL, 0);
     return ESP_OK;
 }
 
-static const httpd_uri_t echo = {
-    .uri       = "/echo",
-    .method    = HTTP_POST,
-    .handler   = echo_post_handler,
-    .user_ctx  = NULL
-};
-
-/* This handler allows the custom error handling functionality to be
- * tested from client side. For that, when a PUT request 0 is sent to
- * URI /ctrl, the /hello and /echo URIs are unregistered and following
- * custom error handler http_404_error_handler() is registered.
- * Afterwards, when /hello or /echo is requested, this custom error
- * handler is invoked which, after sending an error message to client,
- * either closes the underlying socket (when requested URI is /echo)
- * or keeps it open (when requested URI is /hello). This allows the
- * client to infer if the custom error handler is functioning as expected
- * by observing the socket state.
- */
-esp_err_t http_404_error_handler(httpd_req_t *req, httpd_err_code_t err)
+/* Handler to upload a file onto the server */
+static esp_err_t upload_post_handler(httpd_req_t *req)
 {
-    if (strcmp("/hello", req->uri) == 0) {
-        httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "/hello URI is not available");
-        /* Return ESP_OK to keep underlying socket open */
-        return ESP_OK;
-    } else if (strcmp("/echo", req->uri) == 0) {
-        httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "/echo URI is not available");
-        /* Return ESP_FAIL to close underlying socket */
+    char filepath[FILE_PATH_MAX];
+    FILE *fd = NULL;
+    struct stat file_stat;
+
+    /* Skip leading "/upload" from URI to get filename */
+    /* Note sizeof() counts NULL termination hence the -1 */
+    const char *filename = get_path_from_uri(filepath, ((struct file_server_data *)req->user_ctx)->base_path,
+                                             req->uri + sizeof("/upload") - 1, sizeof(filepath));
+    if (!filename) {
+        /* Respond with 500 Internal Server Error */
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Filename too long");
         return ESP_FAIL;
     }
-    /* For any other URI send 404 and close socket */
-    httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Some 404 error message");
-    return ESP_FAIL;
-}
 
-/* An HTTP PUT handler. This demonstrates realtime
- * registration and deregistration of URI handlers
- */
-static esp_err_t ctrl_put_handler(httpd_req_t *req)
-{
-    char buf;
-    int ret;
+    /* Filename cannot have a trailing '/' */
+    if (filename[strlen(filename) - 1] == '/') {
+        ESP_LOGE(TAG, "Invalid filename : %s", filename);
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Invalid filename");
+        return ESP_FAIL;
+    }
 
-    if ((ret = httpd_req_recv(req, &buf, 1)) <= 0) {
-        if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
-            httpd_resp_send_408(req);
+    if (stat(filepath, &file_stat) == 0) {
+        ESP_LOGE(TAG, "File already exists : %s", filepath);
+        /* Respond with 400 Bad Request */
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "File already exists");
+        return ESP_FAIL;
+    }
+
+    /* File cannot be larger than a limit */
+    if (req->content_len > MAX_FILE_SIZE) {
+        ESP_LOGE(TAG, "File too large : %d bytes", req->content_len);
+        /* Respond with 400 Bad Request */
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
+                            "File size must be less than "
+                            MAX_FILE_SIZE_STR "!");
+        /* Return failure to close underlying connection else the
+         * incoming file content will keep the socket busy */
+        return ESP_FAIL;
+    }
+
+    fd = fopen(filepath, "w");
+    if (!fd) {
+        ESP_LOGE(TAG, "Failed to create file : %s", filepath);
+        /* Respond with 500 Internal Server Error */
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to create file");
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI(TAG, "Receiving file : %s...", filename);
+
+    /* Retrieve the pointer to scratch buffer for temporary storage */
+    char *buf = ((struct file_server_data *)req->user_ctx)->scratch;
+    int received;
+
+    /* Content length of the request gives
+     * the size of the file being uploaded */
+    int remaining = req->content_len;
+
+    while (remaining > 0) {
+
+        ESP_LOGI(TAG, "Remaining size : %d", remaining);
+        /* Receive the file part by part into a buffer */
+        if ((received = httpd_req_recv(req, buf, MIN(remaining, SCRATCH_BUFSIZE))) <= 0) {
+            if (received == HTTPD_SOCK_ERR_TIMEOUT) {
+                /* Retry if timeout occurred */
+                continue;
+            }
+
+            /* In case of unrecoverable error,
+             * close and delete the unfinished file*/
+            fclose(fd);
+            unlink(filepath);
+
+            ESP_LOGE(TAG, "File reception failed!");
+            /* Respond with 500 Internal Server Error */
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to receive file");
+            return ESP_FAIL;
         }
-        return ESP_FAIL;
+
+        /* Write buffer content to file on storage */
+        if (received && (received != fwrite(buf, 1, received, fd))) {
+            /* Couldn't write everything to file!
+             * Storage may be full? */
+            fclose(fd);
+            unlink(filepath);
+
+            ESP_LOGE(TAG, "File write failed!");
+            /* Respond with 500 Internal Server Error */
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to write file to storage");
+            return ESP_FAIL;
+        }
+
+        /* Keep track of remaining size of
+         * the file left to be uploaded */
+        remaining -= received;
     }
 
-    if (buf == '0') {
-        /* URI handlers can be unregistered using the uri string */
-        ESP_LOGI(TAG, "Unregistering /hello and /echo URIs");
-        httpd_unregister_uri(req->handle, "/hello");
-        httpd_unregister_uri(req->handle, "/echo");
-        /* Register the custom error handler */
-        httpd_register_err_handler(req->handle, HTTPD_404_NOT_FOUND, http_404_error_handler);
-    }
-    else {
-        ESP_LOGI(TAG, "Registering /hello and /echo URIs");
-        httpd_register_uri_handler(req->handle, &hello);
-        httpd_register_uri_handler(req->handle, &echo);
-        /* Unregister custom error handler */
-        httpd_register_err_handler(req->handle, HTTPD_404_NOT_FOUND, NULL);
-    }
+    /* Close file upon upload completion */
+    fclose(fd);
+    ESP_LOGI(TAG, "File reception complete");
 
-    /* Respond with empty body */
-    httpd_resp_send(req, NULL, 0);
+    /* Redirect onto root to see the updated file list */
+    httpd_resp_set_status(req, "303 See Other");
+    httpd_resp_set_hdr(req, "Location", "/");
+#ifdef CONFIG_EXAMPLE_HTTPD_CONN_CLOSE_HEADER
+    httpd_resp_set_hdr(req, "Connection", "close");
+#endif
+    httpd_resp_sendstr(req, "File uploaded successfully");
     return ESP_OK;
 }
 
-static const httpd_uri_t ctrl = {
-    .uri       = "/ctrl",
-    .method    = HTTP_PUT,
-    .handler   = ctrl_put_handler,
-    .user_ctx  = NULL
-};
-
-static httpd_handle_t start_webserver(void)
+/* Handler to delete a file from the server */
+static esp_err_t delete_post_handler(httpd_req_t *req)
 {
+    char filepath[FILE_PATH_MAX];
+    struct stat file_stat;
+
+    /* Skip leading "/delete" from URI to get filename */
+    /* Note sizeof() counts NULL termination hence the -1 */
+    const char *filename = get_path_from_uri(filepath, ((struct file_server_data *)req->user_ctx)->base_path,
+                                             req->uri  + sizeof("/delete") - 1, sizeof(filepath));
+    if (!filename) {
+        /* Respond with 500 Internal Server Error */
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Filename too long");
+        return ESP_FAIL;
+    }
+
+    /* Filename cannot have a trailing '/' */
+    if (filename[strlen(filename) - 1] == '/') {
+        ESP_LOGE(TAG, "Invalid filename : %s", filename);
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Invalid filename");
+        return ESP_FAIL;
+    }
+
+    if (stat(filepath, &file_stat) == -1) {
+        ESP_LOGE(TAG, "File does not exist : %s", filename);
+        /* Respond with 400 Bad Request */
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "File does not exist");
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI(TAG, "Deleting file : %s", filename);
+    /* Delete file */
+    unlink(filepath);
+
+    /* Redirect onto root to see the updated file list */
+    httpd_resp_set_status(req, "303 See Other");
+    httpd_resp_set_hdr(req, "Location", "/");
+#ifdef CONFIG_EXAMPLE_HTTPD_CONN_CLOSE_HEADER
+    httpd_resp_set_hdr(req, "Connection", "close");
+#endif
+    httpd_resp_sendstr(req, "File deleted successfully");
+    return ESP_OK;
+}
+
+/* Function to start the file server */
+esp_err_t file_server_init(const char *base_path)
+{
+    static struct file_server_data *server_data = NULL;
+
+    if (server_data) {
+        ESP_LOGE(TAG, "File server already started");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    /* Allocate memory for server data */
+    server_data = calloc(1, sizeof(struct file_server_data));
+    if (!server_data) {
+        ESP_LOGE(TAG, "Failed to allocate memory for server data");
+        return ESP_ERR_NO_MEM;
+    }
+    strlcpy(server_data->base_path, base_path,
+            sizeof(server_data->base_path));
+
     httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-#if CONFIG_IDF_TARGET_LINUX
-    // Setting port as 8001 when building for Linux. Port 80 can be used only by a priviliged user in linux.
-    // So when a unpriviliged user tries to run the application, it throws bind error and the server is not started.
-    // Port 8001 can be used by an unpriviliged user as well. So the application will not throw bind error and the
-    // server will be started.
-    config.server_port = 8001;
-#endif // !CONFIG_IDF_TARGET_LINUX
-    config.lru_purge_enable = true;
 
-    // Start the httpd server
-    ESP_LOGI(TAG, "Starting server on port: '%d'", config.server_port);
-    if (httpd_start(&server, &config) == ESP_OK) {
-        // Set URI handlers
-        ESP_LOGI(TAG, "Registering URI handlers");
-        httpd_register_uri_handler(server, &hello);
-        httpd_register_uri_handler(server, &echo);
-        httpd_register_uri_handler(server, &ctrl);
-        #if CONFIG_EXAMPLE_BASIC_AUTH
-        httpd_register_basic_auth(server);
-        #endif
-        return server;
+    /* Use the URI wildcard matching function in order to
+     * allow the same handler to respond to multiple different
+     * target URIs which match the wildcard scheme */
+    config.uri_match_fn = httpd_uri_match_wildcard;
+
+    ESP_LOGI(TAG, "Starting HTTP Server on port: '%d'", config.server_port);
+    if (httpd_start(&server, &config) != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to start file server!");
+        return ESP_FAIL;
     }
 
-    ESP_LOGI(TAG, "Error starting server!");
-    return NULL;
-}
+    /* URI handler for getting uploaded files */
+    httpd_uri_t file_download = {
+        .uri       = "/*",  // Match all URIs of type /path/to/file
+        .method    = HTTP_GET,
+        .handler   = download_get_handler,
+        .user_ctx  = server_data    // Pass server data as context
+    };
+    httpd_register_uri_handler(server, &file_download);
 
-#if !CONFIG_IDF_TARGET_LINUX
-static esp_err_t stop_webserver(httpd_handle_t server)
-{
-    // Stop the httpd server
-    return httpd_stop(server);
-}
+    /* URI handler for uploading files to server */
+    httpd_uri_t file_upload = {
+        .uri       = "/upload/*",   // Match all URIs of type /upload/path/to/file
+        .method    = HTTP_POST,
+        .handler   = upload_post_handler,
+        .user_ctx  = server_data    // Pass server data as context
+    };
+    httpd_register_uri_handler(server, &file_upload);
 
-static void disconnect_handler(void* arg, esp_event_base_t event_base,
-                               int32_t event_id, void* event_data)
-{
-    httpd_handle_t* server = (httpd_handle_t*) arg;
-    if (*server) {
-        ESP_LOGI(TAG, "Stopping webserver");
-        if (stop_webserver(*server) == ESP_OK) {
-            *server = NULL;
-        } else {
-            ESP_LOGE(TAG, "Failed to stop http server");
-        }
-    }
-}
+    /* URI handler for deleting files from server */
+    httpd_uri_t file_delete = {
+        .uri       = "/delete/*",   // Match all URIs of type /delete/path/to/file
+        .method    = HTTP_POST,
+        .handler   = delete_post_handler,
+        .user_ctx  = server_data    // Pass server data as context
+    };
+    httpd_register_uri_handler(server, &file_delete);
 
-static void connect_handler(void* arg, esp_event_base_t event_base,
-                            int32_t event_id, void* event_data)
-{
-    httpd_handle_t* server = (httpd_handle_t*) arg;
-    if (*server == NULL) {
-        ESP_LOGI(TAG, "Starting webserver");
-        *server = start_webserver();
-    }
-}
-#endif // !CONFIG_IDF_TARGET_LINUX
-
-void http_server_init(void)
-{
-    static httpd_handle_t server = NULL;
-
-    ESP_LOGI(TAG, "Starting http_server_init");
-    // ESP_ERROR_CHECK(esp_event_loop_create_default());
-
-    /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
-     * Read "Establishing Wi-Fi or Ethernet Connection" section in
-     * examples/protocols/README.md for more information about this function.
-     */
-    // ESP_ERROR_CHECK(example_connect());
-
-    /* Register event handlers to stop the server when Wi-Fi or Ethernet is disconnected,
-     * and re-start it upon connection.
-     */
-#if !CONFIG_IDF_TARGET_LINUX
-#ifdef CONFIG_EXAMPLE_CONNECT_WIFI
-    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &connect_handler, &server));
-    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &disconnect_handler, &server));
-#endif // CONFIG_EXAMPLE_CONNECT_WIFI
-#ifdef CONFIG_EXAMPLE_CONNECT_ETHERNET
-    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_ETH_GOT_IP, &connect_handler, &server));
-    ESP_ERROR_CHECK(esp_event_handler_register(ETH_EVENT, ETHERNET_EVENT_DISCONNECTED, &disconnect_handler, &server));
-#endif // CONFIG_EXAMPLE_CONNECT_ETHERNET
-#endif // !CONFIG_IDF_TARGET_LINUX
-
-    /* Start the server for the first time */
-    server = start_webserver();
-
-    while (server) {
-        sleep(5);
-    }
+    return ESP_OK;
 }

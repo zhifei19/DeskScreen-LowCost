@@ -8,7 +8,7 @@
 #include "esp_log.h"
 #include "esp_spiffs.h"
 
-void spiffs_init(void);
+void spiffs_init(const char* base_path);
 
 void spiffs_deinit(void);
 

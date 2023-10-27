@@ -16,14 +16,19 @@ idf_component_register(SRCS
                             "src/net/ds_http_server.c"
 
                             "src/ds_system_data.c"
-                    INCLUDE_DIRS 
+                        INCLUDE_DIRS 
                             "."
                             "./include/hal"
                             "./include/fs"
                             "./include/driver"
                             "./include/data"
                             "./include/net"
-                            "./include")
+                            "./include"
+                            
+                        EMBED_FILES 
+                                "./html/favicon.ico" 
+                                "./html/upload_script.html"
+                                )
 
 # Create a SPIFFS image from the contents of the 'spiffs_image' directory
 # that fits the partition named 'storage'. FLASH_IN_PROJECT indicates that

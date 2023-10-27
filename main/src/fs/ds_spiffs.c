@@ -2,7 +2,7 @@
 
 static const char *TAG = "spiffs";
 
-void spiffs_init(void)
+void spiffs_init(const char* base_path)
 {
     ESP_LOGI(TAG, "Initializing SPIFFS");
 

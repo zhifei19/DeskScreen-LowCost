@@ -72,9 +72,10 @@ void app_main(void)
 
     // ds_timer_init();
 
-    spiffs_init();
-    spiffs_test();
-    spiffs_deinit();
+    const char* base_path = "/spiffs";
+    spiffs_init(base_path);
+    // spiffs_test();
+    // spiffs_deinit();
 
     char *ssid = "123";
     char *password = "456";
@@ -86,7 +87,7 @@ void app_main(void)
     nvs_read_data();
 
     wifi_init_softap();
-    http_server_init();
+    file_server_init(base_path);
 
     // gpio_screen_init();
     // gpio_tp_init();

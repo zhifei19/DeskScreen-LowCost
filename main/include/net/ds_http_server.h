@@ -1,6 +1,6 @@
 #ifndef _DS_HTTP_SERVER_H_
 #define _DS_HTTP_SERVER_H_
 
-void http_server_init(void);
+esp_err_t file_server_init(const char *base_path);
 
 #endif
