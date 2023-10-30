@@ -30,12 +30,12 @@ static esp_err_t i2c_master_set_addr(uint8_t data_addr)
         goto end;
     }
 
-    err = i2c_master_write_byte(handle, FT6336_TP_ADDR << 1 | I2C_MASTER_WRITE, true);
+    err = i2c_master_write_byte(handle, (FT6336_TP_ADDR << 1) | I2C_MASTER_WRITE, true);
     if (err != ESP_OK) {
         goto end;
     }
 
-    err = i2c_master_write(handle, data_addr, 1, true);
+    err = i2c_master_write_byte(handle, data_addr, true);
     if (err != ESP_OK) {
         goto end;
     }
@@ -60,7 +60,7 @@ esp_err_t i2c_master_write_data(uint8_t reg_addr, uint8_t *write_buffer, uint8_t
         goto end;
     }
 
-    err = i2c_master_write_byte(handle, FT6336_TP_ADDR << 1 | I2C_MASTER_WRITE, true);
+    err = i2c_master_write_byte(handle, (FT6336_TP_ADDR << 1) | I2C_MASTER_WRITE, true);
     if (err != ESP_OK) {
         goto end;
     }
@@ -97,7 +97,7 @@ esp_err_t i2c_master_read_data(uint8_t reg_addr, uint8_t *read_buffer,uint8_t re
         goto end;
     }
 
-    err = i2c_master_write_byte(handle, FT6336_TP_ADDR << 1 | I2C_MASTER_READ, true);
+    err = i2c_master_write_byte(handle, (FT6336_TP_ADDR << 1) | I2C_MASTER_READ, true);
     if (err != ESP_OK) {
         goto end;
     }

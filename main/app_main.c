@@ -82,8 +82,8 @@ void app_main(void)
     nvs_save_data();
     nvs_read_data();
 
-    gpio_screen_init();
-    gpio_tp_init();
+    // gpio_screen_init();
+    // gpio_tp_init();
 
     ft6336_init();
 
