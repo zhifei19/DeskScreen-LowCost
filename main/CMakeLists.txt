@@ -14,6 +14,8 @@ idf_component_register(SRCS
 
                             "src/net/ds_wifi_ap.c"
                             "src/net/ds_http_server.c"
+                            "src/net/ds_wifi_sta.c"
+                            
 
                             "src/ds_system_data.c"
                         INCLUDE_DIRS 
@@ -26,9 +28,9 @@ idf_component_register(SRCS
                             "./include"
                             
                         EMBED_FILES 
-                                "./html/favicon.ico" 
-                                "./html/upload_script.html"
-                                )
+                            "./html/favicon.ico" 
+                            "./html/upload_script.html"
+                            )
 
 # Create a SPIFFS image from the contents of the 'spiffs_image' directory
 # that fits the partition named 'storage'. FLASH_IN_PROJECT indicates that

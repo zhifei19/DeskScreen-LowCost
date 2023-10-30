@@ -22,6 +22,7 @@
 #include "ds_screen.h"
 #include "ds_wifi_ap.h"
 #include "ds_http_server.h"
+#include "ds_wifi_sta.h"
 
 static const char *TAG = "MAIN APP";
 
@@ -88,6 +89,8 @@ void app_main(void)
 
     wifi_init_softap();
     file_server_init(base_path);
+
+    wifi_sta_init();
 
     // gpio_screen_init();
     // gpio_tp_init();
