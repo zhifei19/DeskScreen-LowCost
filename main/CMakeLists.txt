@@ -15,6 +15,7 @@ idf_component_register(SRCS
                             "src/net/ds_wifi_ap.c"
                             "src/net/ds_http_server.c"
                             "src/net/ds_wifi_sta.c"
+                            "src/net/ds_wifi_scan.c"
                             
 
                             "src/ds_system_data.c"

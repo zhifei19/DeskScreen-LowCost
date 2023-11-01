@@ -23,6 +23,7 @@
 #include "ds_wifi_ap.h"
 #include "ds_http_server.h"
 #include "ds_wifi_sta.h"
+#include "ds_wifi_scan.h"
 
 static const char *TAG = "MAIN APP";
 
@@ -86,6 +87,8 @@ void app_main(void)
     nvs_init();
     nvs_save_data();
     nvs_read_data();
+
+    wifi_scan_start();
 
     wifi_init_softap();
     file_server_init(base_path);
