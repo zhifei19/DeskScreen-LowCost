@@ -31,7 +31,7 @@ void vTaskCode(void *pvParameters)
     for(;;)
     {
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-        printf("task 1 run... \n");
+        // printf("task 1 run... \n");
     }
 }
 
@@ -88,6 +88,8 @@ void app_main(void)
 
     ft6336_init();
     EPD_interface_init();
+    EPD_Init();                            // Full screen refresh initialization.
+
 
     while(1)
     {

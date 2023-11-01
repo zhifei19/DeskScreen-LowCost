@@ -15,4 +15,6 @@ void spi_send_cmd(const uint8_t cmd);
 
 void spi_send_data(const uint8_t data);
 
+void spi_selftest(void);
+
 #endif

@@ -16,11 +16,29 @@ unsigned char partFlag = 1;
 // Busy function
 void lcd_chkstatus(void)
 {
-  uint8_t busy = 1;
-  while (busy)
-  { //=1 BUSY
-    busy = gpio_get_screen_busy();
-  }
+//   uint8_t busy = 1;
+//   while (busy)
+//   { //=1 BUSY
+//     busy = gpio_get_screen_busy();
+//   }
+//     // vTaskDelay(5 / portTICK_PERIOD_MS);
+// 	ESP_LOGI(TAG, "chkstatus finished");
+	int count = 0;
+		unsigned char busy;
+		do
+		{
+			spi_send_cmd(0x71);
+			busy = gpio_get_screen_busy();
+			busy =!(busy & 0x01);        
+			vTaskDelay(10 / portTICK_PERIOD_MS);  
+			count ++;
+			if(count >= 1000){
+				printf("---------------time out ---\n");
+				break;                  
+			}
+		}
+		while(busy);   
+	// vTaskDelay(200 / portTICK_PERIOD_MS);  
 }
 
 // UC8151D
@@ -34,11 +52,14 @@ void EPD_Init(void)
     gpio_set_screen_res(1);
     vTaskDelay(10 / portTICK_PERIOD_MS); // At least 10ms delay
   }
+  printf("lcd_chkstatus passed 0\n");
   lcd_chkstatus();
+  printf("lcd_chkstatus passed 1\n");
 
   spi_send_cmd(0x00);  // panel setting
   spi_send_data(0x1f); // LUT from OTP??KW-BF   KWR-AF  BWROTP 0f BWOTP 1f
   spi_send_data(0x0D);
+  printf("lcd_chkstatus passed 2\n");
 
   spi_send_cmd(0x61); // resolution setting
   spi_send_data(EPD_WIDTH);
@@ -299,15 +320,16 @@ void EPD_interface_init(void)
 
 void EPD_selftest(void)
 {
-  EPD_Init();                            // Full screen refresh initialization.
+  printf("Image show start\n");
   EPD_WhiteScreen_White();               // Clear screen function.
   EPD_DeepSleep();                       // Enter the sleep mode and please do not delete it, otherwise it will reduce the lifespan of the screen.
   vTaskDelay(2000 / portTICK_PERIOD_MS); // Delay for 2s.
   /************Full display(2s)*******************/
-  EPD_Init();                            // Full screen refresh initialization.
+  // EPD_Init();                            // Full screen refresh initialization.
   EPD_WhiteScreen_ALL(gImage_1);         // To Display one image using full screen refresh.
   EPD_DeepSleep();                       // Enter the sleep mode and please do not delete it, otherwise it will reduce the lifespan of the screen.
   vTaskDelay(2000 / portTICK_PERIOD_MS); // Delay for 2s.
+  printf("Image show end\n");
 }
 /***********************************************************
             end file

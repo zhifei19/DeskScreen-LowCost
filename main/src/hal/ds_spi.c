@@ -53,15 +53,15 @@ void spi_send_cmd(const uint8_t cmd)
 {
     esp_err_t ret;
     spi_transaction_t t;
-    gpio_set_screen_cs(0);
     gpio_set_screen_dc(0);
+    gpio_set_screen_cs(0);
     memset(&t, 0, sizeof(t)); // Zero out the transaction
     t.length = 8;             // Command is 8 bits
     t.tx_buffer = &cmd;       // The data is the cmd itself
     t.user=(void*)0;                //D/C needs to be set to 0
     ret = spi_device_polling_transmit(spi, &t); // Transmit!
-    assert(ret == ESP_OK);                      // Should have had no issues.
     gpio_set_screen_cs(1);
+    assert(ret == ESP_OK);                      // Should have had no issues.
 }
 
 /* Send data to the Display. Uses spi_device_polling_transmit, which waits until the
@@ -75,15 +75,15 @@ void spi_send_data(const uint8_t data)
 {
     esp_err_t ret;
     spi_transaction_t t;
-    gpio_set_screen_cs(0);
     gpio_set_screen_dc(1);
+    gpio_set_screen_cs(0);
     memset(&t, 0, sizeof(t));                   // Zero out the transaction
     t.length = 8;                         // Len is in bytes, transaction length is in bits.
     t.tx_buffer = &data;                         // Data
     t.user=(void*)1;                //D/C needs to be set to 1
     ret = spi_device_polling_transmit(spi, &t); // Transmit!
-    assert(ret == ESP_OK);                      // Should have had no issues.
     gpio_set_screen_cs(1);
+    assert(ret == ESP_OK);                      // Should have had no issues.
 }
 
 //This function is called (in irq context!) just before a transmission starts. It will
@@ -182,7 +182,7 @@ void spi_init(void)
 
         .clock_speed_hz = 15 * 1000 * 1000,      // Clock out at 10 MHz
         .mode = 0,                               // SPI mode 0
-        .spics_io_num = PIN_NUM_CS,              // CS pin
+        // .spics_io_num = PIN_NUM_CS,              // CS pin
         .queue_size = 7,                         // We want to be able to queue 7 transactions at a time
         //.pre_cb = lcd_spi_pre_transfer_callback, // Specify pre-transfer callback to handle D/C line
     };
@@ -192,4 +192,20 @@ void spi_init(void)
     // Attach the LCD to the SPI bus
     ret = spi_bus_add_device(HSPI_HOST, &devcfg, &spi);
     ESP_ERROR_CHECK(ret);
+}
+
+
+void spi_selftest(void)
+{
+    while(1)
+    {
+        spi_send_cmd(0x33);
+        vTaskDelay(1000 / portTICK_PERIOD_MS); // At least 10ms delay
+        spi_send_data(0x65);        
+        vTaskDelay(1000 / portTICK_PERIOD_MS); // At least 10ms delay
+        spi_send_cmd(0x66);
+        vTaskDelay(1000 / portTICK_PERIOD_MS); // At least 10ms delay
+        spi_send_data(0x84);        
+        vTaskDelay(1000 / portTICK_PERIOD_MS); // At least 10ms delay
+    }
 }
