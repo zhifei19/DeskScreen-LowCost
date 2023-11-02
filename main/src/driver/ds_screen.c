@@ -9,328 +9,244 @@
 
 static const char *TAG = "ds_screen";
 
-unsigned char oldData[2888];
-unsigned char partFlag = 1;
+#define ALLSCREEN_GRAGHBYTES 5000
 
-////////////////////////////////////E-paper demo//////////////////////////////////////////////////////////
-// Busy function
-void lcd_chkstatus(void)
+////////////////////////private functions//////////////////////
+static void Epaper_READBUSY(void)
 {
-//   uint8_t busy = 1;
-//   while (busy)
-//   { //=1 BUSY
-//     busy = gpio_get_screen_busy();
-//   }
-//     // vTaskDelay(5 / portTICK_PERIOD_MS);
-// 	ESP_LOGI(TAG, "chkstatus finished");
-	int count = 0;
-		unsigned char busy;
-		do
-		{
-			spi_send_cmd(0x71);
-			busy = gpio_get_screen_busy();
-			busy =!(busy & 0x01);        
-			vTaskDelay(10 / portTICK_PERIOD_MS);  
-			count ++;
-			if(count >= 1000){
-				printf("---------------time out ---\n");
-				break;                  
-			}
-		}
-		while(busy);   
-	// vTaskDelay(200 / portTICK_PERIOD_MS);  
+  uint8_t busy;
+  while (1)
+  { //=1 BUSY
+    busy = gpio_get_screen_busy();
+    if (busy == 0)
+      break;
+  }
 }
 
-// UC8151D
-void EPD_Init(void)
+static void EPD_Part_Update(void)
 {
-  unsigned char i;
-  for (i = 0; i < 3; i++)
-  {
-    gpio_set_screen_res(0);              // Module reset
-    vTaskDelay(10 / portTICK_PERIOD_MS); // At least 10ms delay
-    gpio_set_screen_res(1);
-    vTaskDelay(10 / portTICK_PERIOD_MS); // At least 10ms delay
-  }
-  printf("lcd_chkstatus passed 0\n");
-  lcd_chkstatus();
-  printf("lcd_chkstatus passed 1\n");
-
-  spi_send_cmd(0x00);  // panel setting
-  spi_send_data(0x1f); // LUT from OTP??KW-BF   KWR-AF  BWROTP 0f BWOTP 1f
-  spi_send_data(0x0D);
-  printf("lcd_chkstatus passed 2\n");
-
-  spi_send_cmd(0x61); // resolution setting
-  spi_send_data(EPD_WIDTH);
-  spi_send_data(EPD_HEIGHT / 256);
-  spi_send_data(EPD_HEIGHT % 256);
-
-  spi_send_cmd(0x04);
-  lcd_chkstatus(); // waiting for the electronic paper IC to release the idle signal
-
-  spi_send_cmd(0X50);  // VCOM AND DATA INTERVAL SETTING
-  spi_send_data(0x97); // WBmode:VBDF 17|D7 VBDW 97 VBDB 57   WBRmode:VBDF F7 VBDW 77 VBDB 37  VBDR B7
-}
-
-void lut1(void)
-{
-  unsigned int count;
-  spi_send_cmd(0x20);
-  for (count = 0; count < 44; count++)
-  {
-    spi_send_data(lut_vcom1[count]);
-  }
-
-  spi_send_cmd(0x21);
-  for (count = 0; count < 42; count++)
-  {
-    spi_send_data(lut_ww1[count]);
-  }
-
   spi_send_cmd(0x22);
-  for (count = 0; count < 42; count++)
-  {
-    spi_send_data(lut_bw1[count]);
-  }
-
-  spi_send_cmd(0x23);
-  for (count = 0; count < 42; count++)
-  {
-    spi_send_data(lut_wb1[count]);
-  }
-
-  spi_send_cmd(0x24);
-  for (count = 0; count < 42; count++)
-  {
-    spi_send_data(lut_bb1[count]);
-  }
+  spi_send_data(0xFF);
+  spi_send_cmd(0x20);
+  Epaper_READBUSY();
 }
-void EPD_Init_Part(void)
-{
-  unsigned char i;
-  for (i = 0; i < 3; i++)
-  {
-    gpio_set_screen_res(0);              // Module reset
-    vTaskDelay(10 / portTICK_PERIOD_MS); // At least 10ms delay
-    gpio_set_screen_res(1);
-    vTaskDelay(10 / portTICK_PERIOD_MS); // At least 10ms delay
-  }
-  lcd_chkstatus();
 
-  spi_send_cmd(0x01); // POWER SETTING
-  spi_send_data(0x03);
+static void EPD_DeepSleep(void)
+{
+  spi_send_cmd(0x10); // enter deep sleep
+  spi_send_data(0x01);
+  vTaskDelay(100 / portTICK_PERIOD_MS);
+}
+
+static void EPD_Update(void)
+{
+  spi_send_cmd(0x22);
+  spi_send_data(0xF7);
+  spi_send_cmd(0x20);
+  Epaper_READBUSY();
+}
+
+static void EPD_interface_init(void)
+{
+  gpio_screen_init();
+  spi_init();
+}
+//////////////////////public functions//////////////////////
+
+/////////////////EPD settings Functions/////////////////////
+
+void EPD_HW_Init(void)
+{
+  EPD_interface_init();
+
+  gpio_set_screen_res(0);
+  vTaskDelay(1 / portTICK_PERIOD_MS);
+  gpio_set_screen_res(1);
+  vTaskDelay(1 / portTICK_PERIOD_MS);
+
+  Epaper_READBUSY();
+  spi_send_cmd(0x12); // SWRESET
+  Epaper_READBUSY();
+
+  spi_send_cmd(0x01); // Driver output control
+  spi_send_data(0xC7);
   spi_send_data(0x00);
-  spi_send_data(0x2b);
-  spi_send_data(0x2b);
-  spi_send_data(0x03);
+  spi_send_data(0x00);
 
-  spi_send_cmd(0x06);  // boost soft start
-  spi_send_data(0x17); // A
-  spi_send_data(0x17); // B
-  spi_send_data(0x17); // C
+  spi_send_cmd(0x11); // data entry mode
+  spi_send_data(0x01);
 
-  spi_send_cmd(0x00);  // panel setting
-  spi_send_data(0xbf); // LUT from OTP??128x296
-  spi_send_data(0x0D);
+  spi_send_cmd(0x44); // set Ram-X address start/end position
+  spi_send_data(0x00);
+  spi_send_data(0x18); // 0x0C-->(18+1)*8=200
 
-  spi_send_cmd(0x30);
-  spi_send_data(0x3C); // 3A 100HZ   29 150Hz 39 200HZ  31 171HZ
+  spi_send_cmd(0x45);  // set Ram-Y address start/end position
+  spi_send_data(0xC7); // 0xC7-->(199+1)=200
+  spi_send_data(0x00);
+  spi_send_data(0x00);
+  spi_send_data(0x00);
 
-  spi_send_cmd(0x61); // resolution setting
-  spi_send_data(EPD_WIDTH);
-  spi_send_data(EPD_HEIGHT / 256);
-  spi_send_data(EPD_HEIGHT % 256);
+  spi_send_cmd(0x3C); // BorderWavefrom
+  spi_send_data(0x05);
 
-  spi_send_cmd(0x82); // vcom_DC setting
-  spi_send_data(0x12);
-  lut1();
+  spi_send_cmd(0x18);
+  spi_send_data(0x80);
 
-  spi_send_cmd(0x04);
-  lcd_chkstatus();
+  spi_send_cmd(0x4E); // set RAM x address count to 0;
+  spi_send_data(0x00);
+  spi_send_cmd(0x4F); // set RAM y address count to 0X199;
+  spi_send_data(0xC7);
+  spi_send_data(0x00);
+  Epaper_READBUSY();
+
+  ESP_LOGI(TAG, "E-paper display initialized");
 }
-
-void EPD_DeepSleep(void)
-{
-  spi_send_cmd(0X50);  // VCOM AND DATA INTERVAL SETTING
-  spi_send_data(0xf7); // WBmode:VBDF 17|D7 VBDW 97 VBDB 57    WBRmode:VBDF F7 VBDW 77 VBDB 37  VBDR B7
-
-  spi_send_cmd(0X02);                   // power off
-  lcd_chkstatus();                      // waiting for the electronic paper IC to release the idle signal
-  vTaskDelay(100 / portTICK_PERIOD_MS); //!!!The delay here is necessary,100mS at least!!!
-  spi_send_cmd(0X07);                   // deep sleep
-  spi_send_data(0xA5);
-}
-// Full screen refresh update function
-void EPD_Update(void)
-{
-  // Refresh
-  spi_send_cmd(0x12);                 // DISPLAY REFRESH
-  vTaskDelay(1 / portTICK_PERIOD_MS); //!!!The delay here is necessary, 200uS at least!!!
-  lcd_chkstatus();                    // waiting for the electronic paper IC to release the idle signal
-}
-
+//////////////////////////////All screen update////////////////////////////////////////////
 void EPD_WhiteScreen_ALL(const unsigned char *datas)
 {
   unsigned int i;
-  // Write Data
-  spi_send_cmd(0x10); // Transfer old data
-  for (i = 0; i < EPD_ARRAY; i++)
+  spi_send_cmd(0x24); // write RAM for black(0)/white (1)
+  for (i = 0; i < ALLSCREEN_GRAGHBYTES; i++)
   {
-    spi_send_data(0xFF); // Transfer the actual displayed data
-  }
-  spi_send_cmd(0x13); // Transfer new data
-  for (i = 0; i < EPD_ARRAY; i++)
-  {
-    spi_send_data(datas[i]); // Transfer the actual displayed data
-  }
-  EPD_Update();
-}
-void EPD_WhiteScreen_White(void)
-{
-  unsigned int i;
-  // Write Data
-  spi_send_cmd(0x10); // Transfer old data
-  for (i = 0; i < EPD_ARRAY; i++)
-  {
-    spi_send_data(0xFF);
-  }
-  spi_send_cmd(0x13); // Transfer new data
-  for (i = 0; i < EPD_ARRAY; i++)
-  {
-    spi_send_data(0xFF); // Transfer the actual displayed data
-    oldData[i] = 0xFF;
+    spi_send_data(datas[i]);
   }
   EPD_Update();
 }
 
-// Partial refresh of background display, this function is necessary, please do not delete it!!!
+///////////////////////////Part update//////////////////////////////////////////////
 void EPD_SetRAMValue_BaseMap(const unsigned char *datas)
 {
   unsigned int i;
-  spi_send_cmd(0x10); // write old data
-  for (i = 0; i < EPD_ARRAY; i++)
-  {
-    spi_send_data(0xFF);
-  }
-  spi_send_cmd(0x13); // write new data
-  for (i = 0; i < EPD_ARRAY; i++)
+  const unsigned char *datas_flag;
+  datas_flag = datas;
+  spi_send_cmd(0x24); // Write Black and White image to RAM
+  for (i = 0; i < ALLSCREEN_GRAGHBYTES; i++)
   {
     spi_send_data(datas[i]);
-    oldData[i] = datas[i];
+  }
+  datas = datas_flag;
+  spi_send_cmd(0x26); // Write Black and White image to RAM
+  for (i = 0; i < ALLSCREEN_GRAGHBYTES; i++)
+  {
+    spi_send_data(datas[i]);
   }
   EPD_Update();
 }
 
 void EPD_Dis_Part(unsigned int x_start, unsigned int y_start, const unsigned char *datas, unsigned int PART_COLUMN, unsigned int PART_LINE)
 {
-  unsigned int i, x_end, y_end;
-  x_start = x_start - x_start % 8;
-  x_end = x_start + PART_LINE - 1;
-  y_end = y_start + PART_COLUMN - 1;
+  unsigned int i;
+  unsigned int x_end, y_start1, y_start2, y_end1, y_end2;
+  x_start = x_start / 8; //
+  x_end = x_start + PART_LINE / 8 - 1;
 
-  EPD_Init_Part();
-  spi_send_cmd(0x91);       // This command makes the display enter partial mode
-  spi_send_cmd(0x90);       // resolution setting
-  spi_send_data(x_start);   // x-start
-  spi_send_data(x_end - 1); // x-end
-  spi_send_data(y_start / 256);
-  spi_send_data(y_start % 256); // y-start
-  spi_send_data(y_end / 256);
-  spi_send_data(y_end % 256 - 1); // y-end
-  spi_send_data(0x28);
+  y_start1 = 0;
+  y_start2 = y_start;
+  if (y_start >= 256)
+  {
+    y_start1 = y_start2 / 256;
+    y_start2 = y_start2 % 256;
+  }
+  y_end1 = 0;
+  y_end2 = y_start + PART_COLUMN - 1;
+  if (y_end2 >= 256)
+  {
+    y_end1 = y_end2 / 256;
+    y_end2 = y_end2 % 256;
+  }
 
-  spi_send_cmd(0x10); // writes Old data to SRAM
-  if (partFlag == 1)
-  {
-    partFlag = 0;
-    for (i = 0; i < PART_COLUMN * PART_LINE / 8; i++)
-      spi_send_data(0xFF);
-  }
-  else
-  {
-    for (i = 0; i < PART_COLUMN * PART_LINE / 8; i++)
-      spi_send_data(oldData[i]);
-  }
-  spi_send_cmd(0x13); // writes New data to SRAM.
+  // Add hardware reset to prevent background color change
+  gpio_set_screen_res(0);              // Module reset
+  vTaskDelay(10 / portTICK_PERIOD_MS); // At least 10ms delay
+  gpio_set_screen_res(1);
+  vTaskDelay(10 / portTICK_PERIOD_MS); // At least 10ms delay
+                                       // Lock the border to prevent flashing
+  spi_send_cmd(0x3C); // BorderWavefrom,
+  spi_send_data(0x80);
+
+  spi_send_cmd(0x44);      // set RAM x address start/end, in page 35
+  spi_send_data(x_start);  // RAM x address start at 00h;
+  spi_send_data(x_end);    // RAM x address end at 0fh(15+1)*8->128
+  spi_send_cmd(0x45);      // set RAM y address start/end, in page 35
+  spi_send_data(y_start2); // RAM y address start at 0127h;
+  spi_send_data(y_start1); // RAM y address start at 0127h;
+  spi_send_data(y_end2);   // RAM y address end at 00h;
+  spi_send_data(y_end1);   // ????=0
+
+  spi_send_cmd(0x4E); // set RAM x address count to 0;
+  spi_send_data(x_start);
+  spi_send_cmd(0x4F); // set RAM y address count to 0X127;
+  spi_send_data(y_start2);
+  spi_send_data(y_start1);
+
+  spi_send_cmd(0x24); // Write Black and White image to RAM
   for (i = 0; i < PART_COLUMN * PART_LINE / 8; i++)
   {
     spi_send_data(datas[i]);
-    oldData[i] = datas[i];
+  }
+  EPD_Part_Update();
+}
+
+/////////////////////////////////Single display////////////////////////////////////////////////
+
+void EPD_WhiteScreen_Black(void)
+
+{
+  unsigned int i, k;
+  spi_send_cmd(0x24); // write RAM for black(0)/white (1)
+  for (k = 0; k < 250; k++)
+  {
+    for (i = 0; i < 25; i++)
+    {
+      spi_send_data(0x00);
+    }
   }
   EPD_Update();
 }
 
-// Full screen partial refresh display
-void EPD_Dis_PartAll(const unsigned char *datas)
-{
-  unsigned int i;
-  EPD_Init_Part();
-  // Write Data
-  spi_send_cmd(0x10); // Transfer old data
-  for (i = 0; i < EPD_ARRAY; i++)
-  {
-    spi_send_data(oldData[i]); // Transfer the actual displayed data
-  }
-  spi_send_cmd(0x13); // Transfer new data
-  for (i = 0; i < EPD_ARRAY; i++)
-  {
-    spi_send_data(datas[i]); // Transfer the actual displayed data
-    oldData[i] = datas[i];
-  }
+void EPD_WhiteScreen_White(void)
 
+{
+  unsigned int i, k;
+  spi_send_cmd(0x24); // write RAM for black(0)/white (1)
+  for (k = 0; k < 250; k++)
+  {
+    for (i = 0; i < 25; i++)
+    {
+      spi_send_data(0xff);
+    }
+  }
   EPD_Update();
-}
-
-////////////////////////////////Other newly added functions////////////////////////////////////////////
-// Display rotation 180 degrees initialization
-void EPD_Init_180(void)
-{
-  unsigned char i;
-  for (i = 0; i < 3; i++)
-  {
-    gpio_set_screen_res(0);              // Module reset
-    vTaskDelay(10 / portTICK_PERIOD_MS); // At least 10ms delay
-    gpio_set_screen_res(1);
-    vTaskDelay(10 / portTICK_PERIOD_MS); // At least 10ms delay
-  }
-  lcd_chkstatus();
-
-  spi_send_cmd(0x00);  // panel setting
-  spi_send_data(0x13); // LUT from OTP??KW-BF   KWR-AF  BWROTP 0f BWOTP 1f
-  spi_send_data(0x0D);
-
-  spi_send_cmd(0x61); // resolution setting
-  spi_send_data(EPD_WIDTH);
-  spi_send_data(EPD_HEIGHT / 256);
-  spi_send_data(EPD_HEIGHT % 256);
-
-  spi_send_cmd(0x04);
-  lcd_chkstatus(); // waiting for the electronic paper IC to release the idle signal
-
-  spi_send_cmd(0X50);  // VCOM AND DATA INTERVAL SETTING
-  spi_send_data(0x97); // WBmode:VBDF 17|D7 VBDW 97 VBDB 57   WBRmode:VBDF F7 VBDW 77 VBDB 37  VBDR B7
-}
-
-void EPD_interface_init(void)
-{
-  gpio_screen_init();
-  spi_init();
 }
 
 void EPD_selftest(void)
 {
-  printf("Image show start\n");
-  EPD_WhiteScreen_White();               // Clear screen function.
-  EPD_DeepSleep();                       // Enter the sleep mode and please do not delete it, otherwise it will reduce the lifespan of the screen.
-  vTaskDelay(2000 / portTICK_PERIOD_MS); // Delay for 2s.
-  /************Full display(2s)*******************/
-  // EPD_Init();                            // Full screen refresh initialization.
-  EPD_WhiteScreen_ALL(gImage_1);         // To Display one image using full screen refresh.
-  EPD_DeepSleep();                       // Enter the sleep mode and please do not delete it, otherwise it will reduce the lifespan of the screen.
-  vTaskDelay(2000 / portTICK_PERIOD_MS); // Delay for 2s.
-  printf("Image show end\n");
+
+  // EPD_HW_Init(); //Electronic paper initialization
+  // EPD_WhiteScreen_ALL(gImage_6); //Refresh the picture in full screen
+  // vTaskDelay(2000 / portTICK_PERIOD_MS);
+  // printf("Screen shows correctly\n");
+
+  //////////////////////Partial refresh digital presentation//////////////////////////////////////
+  // EPD_HW_Init(); //Electronic paper initialization
+  EPD_SetRAMValue_BaseMap(gImage_6); // Partial refresh background color,Brush map is a must, please do not delete
+  vTaskDelay(100 / portTICK_PERIOD_MS);
+  EPD_SetRAMValue_BaseMap(gImage_basemap);  // Partial refresh background color,Brush map is a must, please do not delete
+  EPD_Dis_Part(0, 32, gImage_num1, 32, 32); // x,y,DATA,resolution 32*32
+  EPD_Dis_Part(0, 32, gImage_num2, 32, 32); // x,y,DATA,resolution 32*32
+  EPD_Dis_Part(0, 32, gImage_num3, 32, 32); // x,y,DATA,resolution 32*32
+  EPD_Dis_Part(0, 32, gImage_num4, 32, 32); // x,y,DATA,resolution 32*32
+  EPD_Dis_Part(0, 32, gImage_num5, 32, 32); // x,y,DATA,resolution 32*32
+  EPD_Dis_Part(0, 32, gImage_num6, 32, 32); // x,y,DATA,resolution 32*32
+  EPD_Dis_Part(0, 32, gImage_num7, 32, 32); // x,y,DATA,resolution 32*32
+  EPD_Dis_Part(0, 32, gImage_num8, 32, 32); // x,y,DATA,resolution 32*32
+  EPD_Dis_Part(0, 32, gImage_num9, 32, 32); // x,y,DATA,resolution 32*32
+  vTaskDelay(2000 / portTICK_PERIOD_MS);
+  ////////////////////////////////////////////////////////////////////////
+  // Clean
+  // EPD_HW_Init();
+  // EPD_WhiteScreen_White();
+  EPD_DeepSleep(); // Sleep
 }
-/***********************************************************
-            end file
-***********************************************************/
+
+//////////////////////////////////END//////////////////////////////////////////////////

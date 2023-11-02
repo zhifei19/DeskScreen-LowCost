@@ -131,8 +131,6 @@ void gpio_screen_init(void)
 
     //bit mask of the pins that you want to set,e.g.GPIO14
     io_conf.pin_bit_mask = SCREEN_GPIO_OUTPUT_DC_SEL;
-    //disable pull-up mode
-    io_conf.pull_up_en = 1;
         //configure GPIO with the given settings
     gpio_config(&io_conf);
 
@@ -150,7 +148,7 @@ void gpio_screen_init(void)
     //set as input mode
     io_conf.mode = GPIO_MODE_INPUT;
     //enable pull-up mode
-    io_conf.pull_up_en = 1;
+    io_conf.pull_up_en = 0;
     gpio_config(&io_conf);
 
     //install gpio isr service
@@ -184,7 +182,6 @@ void gpio_set_screen_dc(uint32_t level)
 void gpio_set_screen_res(uint32_t level)
 {
     gpio_set_level(SCREEN_GPIO_OUTPUT_RES, level);
-    printf("Screen RES used\n");
 }
 
 uint32_t gpio_get_screen_busy(void)

@@ -87,14 +87,14 @@ void app_main(void)
     // gpio_tp_init();
 
     ft6336_init();
-    EPD_interface_init();
-    EPD_Init();                            // Full screen refresh initialization.
+    EPD_HW_Init(); 
+
+    EPD_selftest();
 
 
     while(1)
     {
         ft6336_task();
-        EPD_selftest();
 
         printf("System run...\n");
 
