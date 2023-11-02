@@ -131,12 +131,14 @@ void gpio_screen_init(void)
 
     //bit mask of the pins that you want to set,e.g.GPIO14
     io_conf.pin_bit_mask = SCREEN_GPIO_OUTPUT_DC_SEL;
-    //configure GPIO with the given settings
+        //configure GPIO with the given settings
     gpio_config(&io_conf);
 
     //bit mask of the pins that you want to set,e.g.GPIO12
     io_conf.pin_bit_mask = SCREEN_GPIO_OUTPUT_RES_SEL;
-    //configure GPIO with the given settings
+    //disable pull-up mode
+    io_conf.pull_up_en = 1;
+        //configure GPIO with the given settings
     gpio_config(&io_conf);
 
     //interrupt of falling edge
@@ -150,9 +152,9 @@ void gpio_screen_init(void)
     gpio_config(&io_conf);
 
     //install gpio isr service
-    gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
+    // gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
     //hook isr handler for specific gpio pin
-    gpio_isr_handler_add(SCREEN_GPIO_INPUT_BUSY, screen_isr_handler, (void*) SCREEN_GPIO_INPUT_BUSY);
+    // gpio_isr_handler_add(SCREEN_GPIO_INPUT_BUSY, screen_isr_handler, (void*) SCREEN_GPIO_INPUT_BUSY);
 
     ESP_LOGI(TAG,"GPIO SCREEN INIT");
 

@@ -98,13 +98,15 @@ void app_main(void)
     // gpio_screen_init();
     // gpio_tp_init();
 
-    // ft6336_init();
-    // EPD_interface_init();
+    ft6336_init();
+    EPD_HW_Init(); 
+
+    EPD_selftest();
+
 
     while(1)
     {
-        // ft6336_task();
-        // EPD_selftest();
+        ft6336_task();
 
         printf("System run...\n");
 
