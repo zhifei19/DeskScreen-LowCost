@@ -60,13 +60,15 @@ menu "DesktopScreen Configuration"
     menu "Wifi STA"
         config ESP_WIFI_SSID
             string "WiFi SSID"
-            default "Digital Building"
+            # default "Digital Building"
+            default "CMCC-P2sn"
             help
                 SSID (network name) for the example to connect to.
 
         config ESP_WIFI_PASSWORD
             string "WiFi Password"
-            default "SECSDB02"
+            # default "SECSDB02"
+            default "tmqybpqy"
             help
                 WiFi password (WPA or WPA2) for the example to use.
 
@@ -133,6 +135,15 @@ menu "DesktopScreen Configuration"
             default 10
             help
                 The size of array that will be used to retrieve the list of access points.
+    endmenu
+
+# http client
+    menu "HTTP Client"
+        config EXAMPLE_HTTP_ENDPOINT
+            string "Example HTTP Endpoint"
+            default "httpbin.org"
+            help
+                Target endpoint host-name for the example to use.
     endmenu
     
 endmenu

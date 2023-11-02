@@ -24,6 +24,7 @@
 #include "ds_http_server.h"
 #include "ds_wifi_sta.h"
 #include "ds_wifi_scan.h"
+#include "ds_http_request.h"
 
 static const char *TAG = "MAIN APP";
 
@@ -88,10 +89,10 @@ void app_main(void)
     nvs_save_data();
     nvs_read_data();
 
-    wifi_scan_start();
+    // wifi_scan_start();
 
-    wifi_init_softap();
-    file_server_init(base_path);
+    // wifi_init_softap();
+    // file_server_init(base_path);
 
     wifi_sta_init();
 
@@ -103,6 +104,7 @@ void app_main(void)
 
     EPD_selftest();
 
+    http_client_init();
 
     while(1)
     {

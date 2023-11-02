@@ -14,13 +14,20 @@ static const char *TAG = "ds_screen";
 ////////////////////////private functions//////////////////////
 static void Epaper_READBUSY(void)
 {
-  uint8_t busy;
-  while (1)
-  { //=1 BUSY
-    busy = gpio_get_screen_busy();
-    if (busy == 0)
-      break;
-  }
+  int count = 0;
+	unsigned char busy;
+	do
+	{
+		busy = gpio_get_screen_busy();
+		busy =!(busy & 0x01);        
+		vTaskDelay(10 / portTICK_PERIOD_MS);  
+		count ++;
+		if(count >= 1000){
+			printf("---------------time out ---\n");
+			break;                  
+		}
+	}
+	while(busy); 
 }
 
 static void EPD_Part_Update(void)
