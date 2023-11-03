@@ -32,7 +32,10 @@ idf_component_register(SRCS
                         EMBED_FILES 
                             "./html/favicon.ico" 
                             "./html/upload_script.html"
-                            )
+
+                        EMBED_TXTFILES
+                            "weather_root_cert.pem"
+                        )
 
 # Create a SPIFFS image from the contents of the 'spiffs_image' directory
 # that fits the partition named 'storage'. FLASH_IN_PROJECT indicates that
