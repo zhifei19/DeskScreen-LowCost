@@ -73,7 +73,7 @@ void app_main(void)
 
     xTaskCreate(vTaskCode, "NAME", STACK_SIZE, NULL, tsk1_PRIORITY, NULL);
 
-    // ds_timer_init();
+    ds_timer_init();
 
     const char* base_path = "/spiffs";
     spiffs_init(base_path);
@@ -100,9 +100,9 @@ void app_main(void)
     // gpio_tp_init();
 
     ft6336_init();
-    EPD_HW_Init(); 
+    // EPD_HW_Init(); 
 
-    EPD_selftest();
+    // EPD_selftest();
 
     http_client_init();
 

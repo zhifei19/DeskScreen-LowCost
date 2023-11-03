@@ -6,6 +6,7 @@
 #include "nvs_flash.h"
 #include "esp_event.h"
 #include "esp_netif.h"
+#include "cJSON.h"
 // #include "protocol_examples_common.h"
 // #include "protocol_examples_utils.h"
 #include "esp_tls.h"
@@ -44,6 +45,45 @@ static const char *TAG = "ds_HTTP_CLIENT";
 
 extern const char weather_root_cert_pem_start[] asm("_binary_weather_root_cert_pem_start");
 extern const char weather_root_cert_pem_end[]   asm("_binary_weather_root_cert_pem_end");
+
+/*
+{
+    "results":[
+        {
+            "location":{
+                "id":"WX4FBXXFKE4F",
+                "name":"??",
+                "country":"CN",
+                "path":"??,??,??",
+                "timezone":"Asia/Shanghai",
+                "timezone_offset":"+08:00"
+            },
+            "now":{
+                "text":"??",
+                "code":"4",
+                "temperature":"12"
+            },
+            "last_update":"2023-11-03T22:00:00+08:00"
+        }
+    ]
+}
+*/
+
+void cjson_weather_info(char *text)
+{
+    cJSON *json = cJSON_Parse(text);
+
+    /* ????key?value */
+    cJSON *json_array = cJSON_GetObjectItem(json, "results"); 
+    cJSON *json_results = cJSON_GetArrayItem(json_array, 0); 
+    cJSON *json_now = cJSON_GetObjectItem(json_results, "now"); 
+    cJSON *json_temp = cJSON_GetObjectItem(json_now, "temperature"); 
+
+
+    ESP_LOGI(TAG, "temperature is %s", json_temp->valuestring);
+    cJSON_Delete(json);
+}
+
 
 esp_err_t _http_event_handler(esp_http_client_event_t *evt)
 {
@@ -236,31 +276,37 @@ esp_err_t _https_weather_event_handler(esp_http_client_event_t *evt)
              *  Check for chunked encoding is added as the URL for chunked encoding used in this example returns binary data.
              *  However, event handler can also be used in case chunked encoding is used.
              */
-            // if (!esp_http_client_is_chunked_response(evt->client)) {
-            //     // If user_data buffer is configured, copy the response into the buffer
-            //     int copy_len = 0;
-            //     if (evt->user_data) {
-            //         copy_len = MIN(evt->data_len, (MAX_HTTP_OUTPUT_BUFFER - output_len));
-            //         if (copy_len) {
-            //             memcpy(evt->user_data + output_len, evt->data, copy_len);
-            //         }
-            //     } else {
-            //         const int buffer_len = esp_http_client_get_content_length(evt->client);
-            //         if (output_buffer == NULL) {
-            //             output_buffer = (char *) malloc(buffer_len);
-            //             output_len = 0;
-            //             if (output_buffer == NULL) {
-            //                 ESP_LOGE(TAG, "Failed to allocate memory for output buffer");
-            //                 return ESP_FAIL;
-            //             }
-            //         }
-            //         copy_len = MIN(evt->data_len, (buffer_len - output_len));
-            //         if (copy_len) {
-            //             memcpy(output_buffer + output_len, evt->data, copy_len);
-            //         }
-            //     }
-            //     output_len += copy_len;
-            // }
+            if (!esp_http_client_is_chunked_response(evt->client)) {
+                printf("esp_http_client_is_chunked_response check passed\n");
+                // If user_data buffer is configured, copy the response into the buffer
+                int copy_len = 0;
+                if (evt->user_data) {
+                    printf("evt->user_data check passed\n");
+                    copy_len = MIN(evt->data_len, (MAX_HTTP_OUTPUT_BUFFER - output_len));
+                    if (copy_len) {
+                        memcpy(evt->user_data + output_len, evt->data, copy_len);
+                        printf("%.*s\n",output_len,(char *)evt->user_data);
+                        cjson_weather_info((char *)evt->user_data);
+                    }
+                } else {
+                    const int buffer_len = esp_http_client_get_content_length(evt->client);
+                    if (output_buffer == NULL) {
+                        output_buffer = (char *) malloc(buffer_len);
+                        output_len = 0;
+                        if (output_buffer == NULL) {
+                            ESP_LOGE(TAG, "Failed to allocate memory for output buffer");
+                            return ESP_FAIL;
+                        }
+                    }
+                    copy_len = MIN(evt->data_len, (buffer_len - output_len));
+                    if (copy_len) {
+                        memcpy(output_buffer + output_len, evt->data, copy_len);
+                        printf("%.*s\n", output_len, output_buffer);
+                        cjson_weather_info((char*)output_buffer);
+                    }
+                }
+                output_len += copy_len;
+            }
 
             break;
         case HTTP_EVENT_ON_FINISH:
@@ -335,8 +381,6 @@ static void http_get_weather(void)
 static void https_get_weather(void)
 {
     esp_http_client_config_t config = {
-        // .host = "www.howsmyssl.com",
-        // .path = "/",
         .url = "https://api.seniverse.com/v3/weather/now.json?key=SWCiZfZFejLvD9FD3&location=beijing&language=zh-Hans&unit=c",
         .transport_type = HTTP_TRANSPORT_OVER_SSL,
         .event_handler = _https_weather_event_handler,
