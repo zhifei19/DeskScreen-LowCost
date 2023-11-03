@@ -132,19 +132,19 @@ esp_err_t _http_weather_event_handler(esp_http_client_event_t *evt)
     static int output_len;       // Stores number of bytes read
     switch(evt->event_id) {
         case HTTP_EVENT_ERROR:
-            ESP_LOGD(TAG, "HTTP_EVENT_ERROR");
+            ESP_LOGI(TAG, "HTTP_EVENT_ERROR");
             break;
         case HTTP_EVENT_ON_CONNECTED:
-            ESP_LOGD(TAG, "HTTP_EVENT_ON_CONNECTED");
+            ESP_LOGI(TAG, "HTTP_EVENT_ON_CONNECTED");
             break;
         case HTTP_EVENT_HEADER_SENT:
-            ESP_LOGD(TAG, "HTTP_EVENT_HEADER_SENT");
+            ESP_LOGI(TAG, "HTTP_EVENT_HEADER_SENT");
             break;
         case HTTP_EVENT_ON_HEADER:
-            ESP_LOGD(TAG, "HTTP_EVENT_ON_HEADER, key=%s, value=%s", evt->header_key, evt->header_value);
+            ESP_LOGI(TAG, "HTTP_EVENT_ON_HEADER, key=%s, value=%s", evt->header_key, evt->header_value);
             break;
         case HTTP_EVENT_ON_DATA:
-            ESP_LOGD(TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
+            ESP_LOGI(TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
             /*
              *  Check for chunked encoding is added as the URL for chunked encoding used in this example returns binary data.
              *  However, event handler can also be used in case chunked encoding is used.
@@ -177,7 +177,7 @@ esp_err_t _http_weather_event_handler(esp_http_client_event_t *evt)
 
             break;
         case HTTP_EVENT_ON_FINISH:
-            ESP_LOGD(TAG, "HTTP_EVENT_ON_FINISH");
+            ESP_LOGI(TAG, "HTTP_EVENT_ON_FINISH");
             if (output_buffer != NULL) {
                 // Response is accumulated in output_buffer. Uncomment the below line to print the accumulated response
                 // ESP_LOG_BUFFER_HEX(TAG, output_buffer, output_len);
@@ -201,7 +201,7 @@ esp_err_t _http_weather_event_handler(esp_http_client_event_t *evt)
             output_len = 0;
             break;
         case HTTP_EVENT_REDIRECT:
-            ESP_LOGD(TAG, "HTTP_EVENT_REDIRECT");
+            ESP_LOGI(TAG, "HTTP_EVENT_REDIRECT");
             esp_http_client_set_header(evt->client, "From", "user@example.com");
             esp_http_client_set_header(evt->client, "Accept", "text/html");
             esp_http_client_set_redirection(evt->client);
@@ -222,7 +222,7 @@ static void http_get_weather(void)
      */
     esp_http_client_config_t config = {
         // .host = CONFIG_EXAMPLE_HTTP_ENDPOINT,
-        .method = HTTP_METHOD_GET, //get«Î«Û
+        .method = HTTP_METHOD_GET, //get??
         .url = "https://api.seniverse.com/v3/weather/now.json?key=SWCiZfZFejLvD9FD3&location=beijing&language=zh-Hans&unit=c",
         .event_handler = _http_weather_event_handler,
         .skip_cert_common_name_check = true,
@@ -874,7 +874,11 @@ static void http_partial_download(void)
 
 static void http_test_task(void *pvParameters)
 {
-    http_get_weather();
+    while(1)
+    {
+        // http_rest_with_url();
+        http_get_weather();
+    }
 
 #if 0
     http_rest_with_hostname_path();
