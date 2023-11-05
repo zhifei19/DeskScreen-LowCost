@@ -1032,6 +1032,7 @@ static void http_test_task(void *pvParameters)
     {
         // http_rest_with_url();
         https_get_weather();
+        vTaskDelay(5000 / portTICK_PERIOD_MS); 
     }
 
 #if 0

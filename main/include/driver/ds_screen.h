@@ -3,23 +3,30 @@
 
 #include "ds_spi.h"
 
-#define EPD_WIDTH   152
-#define EPD_HEIGHT  152
-#define EPD_ARRAY  EPD_WIDTH*EPD_HEIGHT/8  
-//EPD settings Functions
-void EPD_HW_Init(void); //Electronic paper initialization
+//250*122///////////////////////////////////////
 
-//All screen update 
-void EPD_WhiteScreen_ALL(const unsigned char * datas);
+#define MAX_LINE_BYTES 25// =200/8
+#define MAX_COLUMN_BYTES  200
+
+#define ALLSCREEN_GRAGHBYTES 5000
+
+//EPD
+void Epaper_READBUSY(void);
+
+void EPD_HW_Init(void); //Electronic paper initialization
+void EPD_Part_Init(void); //Local refresh initialization
+
+void EPD_Part_Update(void); 
+void EPD_Update(void);
 
 void EPD_WhiteScreen_Black(void);
 void EPD_WhiteScreen_White(void);
-
-//Part update
+void EPD_DeepSleep(void);
+//Display 
+void EPD_WhiteScreen_ALL(const unsigned char * datas);
 void EPD_SetRAMValue_BaseMap(const unsigned char * datas);
 void EPD_Dis_Part(unsigned int x_start,unsigned int y_start,const unsigned char * datas,unsigned int PART_COLUMN,unsigned int PART_LINE);
-
-//EPD self test function
 void EPD_selftest(void);
+void EPD_interface_init(void);
 
 #endif

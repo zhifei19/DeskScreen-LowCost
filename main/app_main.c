@@ -100,9 +100,9 @@ void app_main(void)
     // gpio_tp_init();
 
     ft6336_init();
-    // EPD_HW_Init(); 
+    EPD_interface_init(); 
 
-    // EPD_selftest();
+    EPD_selftest();
 
     http_client_init();
 
