@@ -1,6 +1,8 @@
 idf_component_register(SRCS 
                             "app_main.c"
 
+                            "src/draw/ds_font.c"
+
                             "src/hal/ds_timer.c"
                             "src/hal/ds_nvs.c"
                             "src/hal/ds_gpio.c"
@@ -27,6 +29,7 @@ idf_component_register(SRCS
                             "./include/driver"
                             "./include/data"
                             "./include/net"
+                            "./include/draw"
                             "./include"
                             
                         EMBED_FILES 

@@ -19,26 +19,26 @@ void EPD_selftest()
 {
 
   EPD_HW_Init();                 // Electronic paper initialization
-  EPD_WhiteScreen_ALL(gImage_1); // Refresh the picture in full screen
+  EPD_WhiteScreen_ALL(gImage_menu); // Refresh the picture in full screen
   vTaskDelay(2000 / portTICK_PERIOD_MS);
 
   //////////////////////Partial refresh digital presentation//////////////////////////////////////
-  EPD_HW_Init();                           // Electronic paper initialization
-  EPD_SetRAMValue_BaseMap(gImage_basemap); // Partial refresh background color,Brush map is a must, please do not delete
-  vTaskDelay(100 / portTICK_PERIOD_MS);
-  EPD_Dis_Part(0, 32, gImage_num1, 32, 32); // x,y,DATA,resolution 32*32
-  EPD_Dis_Part(0, 32, gImage_num2, 32, 32); // x,y,DATA,resolution 32*32
-  EPD_Dis_Part(0, 32, gImage_num3, 32, 32); // x,y,DATA,resolution 32*32
-  EPD_Dis_Part(0, 32, gImage_num4, 32, 32); // x,y,DATA,resolution 32*32
-  EPD_Dis_Part(0, 32, gImage_num5, 32, 32); // x,y,DATA,resolution 32*32
-  EPD_Dis_Part(0, 32, gImage_num6, 32, 32); // x,y,DATA,resolution 32*32
-  EPD_Dis_Part(0, 32, gImage_num7, 32, 32); // x,y,DATA,resolution 32*32
-  EPD_Dis_Part(0, 32, gImage_num8, 32, 32); // x,y,DATA,resolution 32*32
-  EPD_Dis_Part(0, 32, gImage_num9, 32, 32); // x,y,DATA,resolution 32*32
-  vTaskDelay(2000 / portTICK_PERIOD_MS);
-  ////////////////////////////////////////////////////////////////////////
-  EPD_HW_Init();
-  EPD_WhiteScreen_White();
+  // EPD_HW_Init();                           // Electronic paper initialization
+  // EPD_SetRAMValue_BaseMap(gImage_basemap); // Partial refresh background color,Brush map is a must, please do not delete
+  // vTaskDelay(100 / portTICK_PERIOD_MS);
+  // EPD_Dis_Part(0, 32, gImage_num1, 32, 32); // x,y,DATA,resolution 32*32
+  // EPD_Dis_Part(0, 32, gImage_num2, 32, 32); // x,y,DATA,resolution 32*32
+  // EPD_Dis_Part(0, 32, gImage_num3, 32, 32); // x,y,DATA,resolution 32*32
+  // EPD_Dis_Part(0, 32, gImage_num4, 32, 32); // x,y,DATA,resolution 32*32
+  // EPD_Dis_Part(0, 32, gImage_num5, 32, 32); // x,y,DATA,resolution 32*32
+  // EPD_Dis_Part(0, 32, gImage_num6, 32, 32); // x,y,DATA,resolution 32*32
+  // EPD_Dis_Part(0, 32, gImage_num7, 32, 32); // x,y,DATA,resolution 32*32
+  // EPD_Dis_Part(0, 32, gImage_num8, 32, 32); // x,y,DATA,resolution 32*32
+  // EPD_Dis_Part(0, 32, gImage_num9, 32, 32); // x,y,DATA,resolution 32*32
+  // vTaskDelay(2000 / portTICK_PERIOD_MS);
+  // ////////////////////////////////////////////////////////////////////////
+  // EPD_HW_Init();
+  // EPD_WhiteScreen_White();
   EPD_DeepSleep(); // Sleep
 }
 
