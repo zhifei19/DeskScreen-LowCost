@@ -58,7 +58,7 @@ void EPD_HW_Init(void)
   spi_send_cmd(0x01); // Driver output control
   spi_send_data(0xC7);
   spi_send_data(0x00);
-  spi_send_data(0x00);
+  spi_send_data(0x01);
 
   spi_send_cmd(0x11); // data entry mode
   spi_send_data(0x01);

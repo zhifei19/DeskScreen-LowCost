@@ -2,6 +2,7 @@ idf_component_register(SRCS
                             "app_main.c"
 
                             "src/draw/ds_font.c"
+                            "src/draw/ds_paint.c"
 
                             "src/hal/ds_timer.c"
                             "src/hal/ds_nvs.c"

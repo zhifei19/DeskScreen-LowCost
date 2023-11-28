@@ -26,6 +26,7 @@
 #include "ds_wifi_scan.h"
 #include "ds_http_request.h"
 #include "ds_font.h"
+#include "ds_paint.h"
 
 static const char *TAG = "MAIN APP";
 
@@ -95,19 +96,20 @@ void app_main(void)
     // wifi_init_softap();
     // file_server_init(base_path);
 
-    // wifi_sta_init();
+    wifi_sta_init();
 
     // gpio_screen_init();
     // gpio_tp_init();
 
-    // ft6336_init();
-    // EPD_interface_init(); 
+    ft6336_init();
+    EPD_interface_init(); 
 
     // EPD_selftest();
 
-    // http_client_init();
+    http_client_init();
 
-    font_test();
+    ds_ui_show_test();
+
 
     while(1)
     {
