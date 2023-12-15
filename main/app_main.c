@@ -20,13 +20,14 @@
 #include "ds_gpio.h"
 #include "ds_ft6336.h"
 #include "ds_screen.h"
-#include "ds_wifi_ap.h"
+// #include "ds_wifi_ap.h"
 #include "ds_http_server.h"
-#include "ds_wifi_sta.h"
+// #include "ds_wifi_sta.h"
 #include "ds_wifi_scan.h"
 #include "ds_http_request.h"
 #include "ds_font.h"
 #include "ds_paint.h"
+#include "ds_ap_sta.h"
 
 static const char *TAG = "MAIN APP";
 
@@ -91,12 +92,14 @@ void app_main(void)
     nvs_save_data();
     nvs_read_data();
 
+    wifi_ap_sta_init();
+
     // wifi_scan_start();
 
     // wifi_init_softap();
-    // file_server_init(base_path);
+    file_server_init(base_path);
 
-    wifi_sta_init();
+    // wifi_sta_init();
 
     // gpio_screen_init();
     // gpio_tp_init();
