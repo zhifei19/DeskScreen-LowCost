@@ -23,7 +23,7 @@ static esp_err_t i2c_master_set_addr(uint8_t data_addr)
     esp_err_t err = ESP_OK;
 
     i2c_cmd_handle_t handle = i2c_cmd_link_create();
-    assert (handle != NULL);
+    // assert (handle != NULL);
 
     err = i2c_master_start(handle);
     if (err != ESP_OK) {
@@ -44,7 +44,7 @@ static esp_err_t i2c_master_set_addr(uint8_t data_addr)
     err = i2c_master_cmd_begin(I2C_MASTER_NUM, handle, 1000/portTICK_PERIOD_MS);
 
 end:
-    i2c_cmd_link_delete_static(handle);
+    i2c_cmd_link_delete(handle);
     return err;
 }
 
@@ -53,7 +53,7 @@ esp_err_t i2c_master_write_data(uint8_t reg_addr, uint8_t *write_buffer, uint8_t
     esp_err_t err = ESP_OK;
 
     i2c_cmd_handle_t handle = i2c_cmd_link_create();
-    assert (handle != NULL);
+    // assert (handle != NULL);
 
     err = i2c_master_start(handle);
     if (err != ESP_OK) {
@@ -79,7 +79,7 @@ esp_err_t i2c_master_write_data(uint8_t reg_addr, uint8_t *write_buffer, uint8_t
     err = i2c_master_cmd_begin(I2C_MASTER_NUM, handle, 1000/portTICK_PERIOD_MS);
 
 end:
-    i2c_cmd_link_delete_static(handle);
+    i2c_cmd_link_delete(handle);
     return err;
 }
 
@@ -111,7 +111,7 @@ esp_err_t i2c_master_read_data(uint8_t reg_addr, uint8_t *read_buffer,uint8_t re
     err = i2c_master_cmd_begin(I2C_MASTER_NUM, handle, 1000/portTICK_PERIOD_MS);
 
 end:
-    i2c_cmd_link_delete_static(handle);
+    i2c_cmd_link_delete(handle);
     return err;
 }
 

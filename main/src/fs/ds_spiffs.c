@@ -1,6 +1,6 @@
 #include "ds_spiffs.h"
 
-static const char *TAG = "spiffs";
+static const char *TAG = "ds_spiffs";
 
 void spiffs_init(const char* base_path)
 {

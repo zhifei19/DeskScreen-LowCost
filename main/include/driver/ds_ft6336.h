@@ -43,10 +43,21 @@
 #define TP_PRES_DOWN 0x80 // 触屏被按下
 #define TP_COORD_UD 0x40  // 触摸坐标更新标记
 
+
+typedef struct 
+{
+    /* data */
+    uint8_t state;
+    uint16_t x;
+    uint16_t y;
+}TP_POSITION_T;
+
+
 // 触摸点相关数据结构体定义
 typedef struct
 {
     uint8_t TouchSta; // 触摸情况，b7:按下1/松开0; b6:0没有按键按下/1有按键按下;bit5:保留；bit4-bit0触摸点按下有效标志，有效为1，分别对应触摸点5-1；
+    uint8_t touch_count;
     uint16_t x[5];    // 支持5点触摸，需要使用5组坐标存储触摸点数据
     uint16_t y[5];
 
@@ -56,7 +67,6 @@ extern TouchPointRefTypeDef TPR_Structure;
 extern uint8_t touch_count; // 触摸点数标志位
 
 void ft6336_init(void);
-void ft6336_scan(void);
-void ft6336_task(void);
+void ft6336_get_TouchPoint(TP_POSITION_T *position);
 
 #endif

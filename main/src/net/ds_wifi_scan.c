@@ -7,6 +7,7 @@
 #include "nvs_flash.h"
 
 #include "ds_wifi_scan.h"
+#include "ds_system_data.h"
 
 #define DEFAULT_SCAN_LIST_SIZE CONFIG_SCAN_LIST_SIZE
 
@@ -123,8 +124,12 @@ static void print_cipher_type(int pairwise_cipher, int group_cipher)
 /* Initialize Wi-Fi as sta and set scan method */
 static void wifi_scan(void)
 {
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    if(get_netif_init_state() == BOOL_STATUS_DEACTIVE)
+    {
+        ESP_ERROR_CHECK(esp_netif_init());
+        ESP_ERROR_CHECK(esp_event_loop_create_default());
+        set_netif_init_state(BOOL_STATUS_ACTIVE);
+    }
     esp_netif_t *sta_netif = esp_netif_create_default_wifi_sta();
     assert(sta_netif);
 

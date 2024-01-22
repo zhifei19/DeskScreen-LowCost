@@ -1,6 +1,8 @@
 #ifndef _DS_NVS_H_
 #define _DS_NVS_H_
 
+#include <stdbool.h>
+
 typedef enum{
     NVS_WIFI_INFO_ERROR = 0,
     NVS_WIFI_INFO_NULL,
@@ -9,8 +11,10 @@ typedef enum{
 
 void nvs_init(void);
 
-NVS_WIFI_INFO_E nvs_read_data(void);
+bool nvs_read_data(void);
 
 void nvs_save_data(void);
+
+void nvs_selfcheck(void);
 
 #endif

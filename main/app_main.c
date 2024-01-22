@@ -28,25 +28,12 @@
 #include "ds_font.h"
 #include "ds_paint.h"
 #include "ds_ap_sta.h"
+#include "ds_conf.h"
 
 static const char *TAG = "MAIN APP";
 
-#define tsk1_PRIORITY    10
-#define STACK_SIZE          2048
-
-void vTaskCode(void *pvParameters)
+void chip_information_print(void)
 {
-    for(;;)
-    {
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-        // printf("task 1 run... \n");
-    }
-}
-
-void app_main(void)
-{
-    printf("Hello world!\n");
-
     /* Print chip information */
     esp_chip_info_t chip_info;
     uint32_t flash_size;
@@ -72,46 +59,51 @@ void app_main(void)
 
     printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
 
-    ESP_LOGI(TAG, "Desktop Screen V1.1");
+    ESP_LOGI(TAG, "....................................................\n\
+                  .             Desktop Screen V2.0                  .\n\
+                  ....................................................\n");
+}
 
-    xTaskCreate(vTaskCode, "NAME", STACK_SIZE, NULL, tsk1_PRIORITY, NULL);
+void vBackgroundTask(void *pvParameters)
+{
+    for(;;)
+    {
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        // printf("task 1 run... \n");
+    }
+}
 
-    // ds_timer_init();
+void app_main(void)
+{
+    const char* base_path = SPIFFS_BASE_PATH;
+    char *ssid = SSID;
+    char *password = PASSWORD;
 
-    const char* base_path = "/spiffs";
+    chip_information_print();
+
+    /* Driver initialization */
     spiffs_init(base_path);
-    // spiffs_test();
-    // spiffs_deinit();
 
-    char *ssid = "123";
-    char *password = "456";
-    sysdata_set_wifi_info(ssid, strlen(ssid), password, strlen(password));
-    printf("main ssid is: %s, password is: %s\n",ssid,password);
-    printf("main ssid len is:%d\n,password len is:%d\n",(int)strlen(ssid),(int)strlen(password));
+    sysdata_init(ssid, strlen(ssid), password, strlen(password));
+
     nvs_init();
-    nvs_save_data();
-    nvs_read_data();
+
+    ds_timer_init();
 
     wifi_ap_sta_init();
 
-    // wifi_scan_start();
-
-    // wifi_init_softap();
     file_server_init(base_path);
-
-    // wifi_sta_init();
-
-    // gpio_screen_init();
-    // gpio_tp_init();
-
-    ft6336_init();
-    EPD_interface_init(); 
-
-    // EPD_selftest();
 
     http_client_init();
 
+    ft6336_init();
+
+    EPD_interface_init(); 
+
     ds_ui_show_test();
+
+
+    xTaskCreate(vBackgroundTask, "NAME", TASK_BACKGROUND_STACKSIZE, NULL, TASK_BACKGROUND_PRIORITY, NULL);
 
 
     while(1)
@@ -120,6 +112,6 @@ void app_main(void)
 
         printf("System run...\n");
 
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(10000 / portTICK_PERIOD_MS);
     }
 }

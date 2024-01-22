@@ -1091,6 +1091,6 @@ void http_client_init(void)
 #if CONFIG_IDF_TARGET_LINUX
     http_test_task(NULL);
 #else
-    xTaskCreate(&http_test_task, "http_test_task", 8192, NULL, 5, NULL);
+    // xTaskCreate(&http_test_task, "http_test_task", 8192, NULL, 5, NULL);
 #endif
 }

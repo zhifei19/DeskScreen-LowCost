@@ -10,6 +10,8 @@
 
 #include "ds_gpio.h"
 #include "ds_ft6336.h"
+#include "ds_system_data.h"
+#include "ds_conf.h"
 
 static const char *TAG = "ds_gpio";
 
@@ -48,24 +50,29 @@ static QueueHandle_t gpio_evt_queue = NULL;
 
 static void IRAM_ATTR tp_isr_handler(void* arg)
 {
-    uint32_t gpio_num = (uint32_t) arg;
-    xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
+    xQueueSendFromISR(gpio_evt_queue, &arg, NULL);
 
     TPR_Structure.TouchSta |= TP_COORD_UD;				//触摸坐标有更新
 }
 
-static void IRAM_ATTR screen_isr_handler(void* arg)
-{
-    uint32_t gpio_num = (uint32_t) arg;
-    xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
-}
+// static void IRAM_ATTR screen_isr_handler(void* arg)
+// {
+//     uint32_t gpio_num = (uint32_t) arg;
+//     xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
+// }
 
 static void gpio_task_example(void* arg)
 {
     uint32_t io_num;
     for(;;) {
         if(xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) {
-            printf("GPIO[%"PRIu32"] intr, val: %d\n", io_num, gpio_get_level(io_num));
+            if(gpio_get_level(io_num) == 0)
+            {
+                reset_tp_action_manage();
+            }
+            else{
+                check_tp_action();
+            }
         }
     }
 }
@@ -103,7 +110,7 @@ void gpio_tp_init(void)
     //create a queue to handle gpio event from isr
     gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
     //start gpio task
-    xTaskCreate(gpio_task_example, "gpio_task_example", 2048, NULL, 10, NULL);
+    xTaskCreate(gpio_task_example, "gpio_task_example", TASK_TP_GPIO_STACKSIZE, NULL, TASK_TP_GPIO_PRIORITY, NULL);
 
     //install gpio isr service
     gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);

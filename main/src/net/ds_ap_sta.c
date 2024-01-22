@@ -9,6 +9,7 @@
 #include "freertos/event_groups.h"
 #include "ds_wifi_sta.h"
 #include "ds_wifi_ap.h"
+#include "ds_system_data.h"
 
 static const char *TAG = "ds_ap_station";
 

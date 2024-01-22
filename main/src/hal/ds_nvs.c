@@ -12,6 +12,16 @@ static const char *TAG = "ds_nvs";
 
 NVS_WIFI_INFO_E wifi_config_flag = NVS_WIFI_INFO_NULL;
 
+
+void nvs_selfcheck(void)
+{
+    nvs_save_data();
+    if(nvs_read_data())
+        ESP_LOGI(TAG,"NVS selfcheck successed");
+    else
+        ESP_LOGI(TAG,"NVS selfcheck failed");
+}
+
 void nvs_init(void)
 {
     // Initialize NVS
@@ -23,10 +33,12 @@ void nvs_init(void)
         err = nvs_flash_init();
     }
     ESP_ERROR_CHECK( err );
+    nvs_selfcheck();
 }
 
-NVS_WIFI_INFO_E nvs_read_data(void)
+bool nvs_read_data(void)
 {
+    bool ret = false;
     esp_err_t err;
     nvs_handle_t my_handle;
     err = nvs_open("wificonfig", NVS_READWRITE, &my_handle);
@@ -51,11 +63,12 @@ NVS_WIFI_INFO_E nvs_read_data(void)
         password_len--;
         sysdata_set_wifi_info(local_ssid, ssid_len, local_password, password_len);
         sysdata_print_wifi_info();
+        ret = true;
     }else{
         ESP_LOGI(TAG,"WIFI config info null");
     }
     nvs_close(my_handle);
-    return wifi_config_flag;
+    return ret;
 }
 
 void nvs_save_data(void)

@@ -3,6 +3,7 @@
 
 #include "esp_log.h"
 #include "ds_gpio.h"
+#include "ds_conf.h"
 
 const static char *TAG = "ds_ft6336";
 
@@ -21,9 +22,12 @@ const uint16_t FT6236_TPX_TBL[5] =
 // x轴
 //
 //
-uint8_t touch_count = 0;
 
 TouchPointRefTypeDef TPR_Structure;
+
+static QueueHandle_t tp_event_queue = NULL;
+
+void vTPScanTask(void *pvParameters);
 
 void ft6336_init()
 {
@@ -57,6 +61,8 @@ void ft6336_init()
     ESP_ERROR_CHECK(i2c_master_write_data(FT_ID_G_MODE, &temp, 1));
     ESP_ERROR_CHECK(i2c_master_read_data(FT_ID_G_MODE, &r_data, 1));
     ESP_LOGD(TAG, "init G_MODE = %d \n", r_data);
+
+    // xTaskCreate(vTPScanTask, "vTPScanTask", TASK_TPSCAN_STACKSIZE, NULL, TASK_TPSCAN_PRIORITY, NULL);
 }
 
 void ft6336_scan(void)
@@ -66,7 +72,7 @@ void ft6336_scan(void)
     uint8_t buf[4] = {0};
     uint8_t gestid = 0;
     ESP_ERROR_CHECK(i2c_master_read_data(FT_REG_NUM_FINGER, &sta, 1)); // 读取触摸点的状态
-    touch_count = sta;
+    TPR_Structure.touch_count = sta;
     ESP_ERROR_CHECK(i2c_master_read_data(FT_GEST_ID, &gestid, 1)); // 读取触摸点的状态
 
     if (sta & 0x0f) // 判断是否有触摸点按下，0x02寄存器的低4位表示有效触点个数
@@ -100,28 +106,49 @@ void ft6336_scan(void)
             TPR_Structure.TouchSta &= 0xe0; // 清除触摸点有效标记
         }
     }
+    printf("free_heap_size = %ld\n", esp_get_free_heap_size());
 }
 
-void ft6336_task(void)
+void ft6336_get_TouchPoint(TP_POSITION_T *position)
+{
+    ft6336_scan();
+    switch(TPR_Structure.touch_count)
+    {
+        case 1:
+            if((TPR_Structure.x[0]!=0)&&(TPR_Structure.y[0]!=0)
+            &&(TPR_Structure.x[0]<200)&&(TPR_Structure.y[0]<200))
+            {
+                position->state = 1;
+                position->x = TPR_Structure.x[0];
+                position->y = TPR_Structure.y[0];
+                return;
+            }
+        default:
+            break;
+    }
+    
+}
+
+void vTPScanTask(void *pvParameters)
 {
     if (TPR_Structure.TouchSta & TP_COORD_UD) // 触摸有按下
     {
         TPR_Structure.TouchSta = 0; // 清标记
         ft6336_scan();              // 读取触摸坐标
 
-        switch (touch_count)
+        switch (TPR_Structure.touch_count)
         {
         case 1:
             if ((TPR_Structure.x[0] != 0) && (TPR_Structure.y[0] != 0) && (TPR_Structure.x[0] < 200) && (TPR_Structure.y[0] < 200)) // 软件滤掉无效操作
             {
-                ESP_LOGD(TAG,"触摸点个数：:%d", touch_count); // FT6336U最多支持两点触控
+                ESP_LOGD(TAG,"触摸点个数：:%d", TPR_Structure.touch_count); // FT6336U最多支持两点触控
                 ESP_LOGD(TAG,"x0:%d,y0:%d", TPR_Structure.x[0], TPR_Structure.y[0]);
             }
             break;
         case 2:
             if ((TPR_Structure.x[0] != 0) && (TPR_Structure.y[0] != 0) && (TPR_Structure.x[1] != 0) && (TPR_Structure.y[1] != 0) && (TPR_Structure.x[0] < 200) && (TPR_Structure.y[0] < 200) && (TPR_Structure.x[1] < 200) && (TPR_Structure.y[1] < 200)) // 软件滤掉无效操作
             {
-                ESP_LOGD(TAG,"触摸点个数：:%d", touch_count); // FT6336U最多支持两点触控
+                ESP_LOGD(TAG,"触摸点个数：:%d", TPR_Structure.touch_count); // FT6336U最多支持两点触控
                 ESP_LOGD(TAG,"x0:%d,y0:%d", TPR_Structure.x[0], TPR_Structure.y[0]);
                 ESP_LOGD(TAG,"x1:%d,y1:%d", TPR_Structure.x[1], TPR_Structure.y[1]);
             }
