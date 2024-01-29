@@ -41,6 +41,13 @@ typedef struct {
     uint32_t tp_wakeup_timeleft;
 
     BOOL_STATUS_E netif_init_state;
+
+    uint8_t tomato_work_time;
+    uint8_t tomato_reset_time;
+    uint8_t tomato_time_count;
+
+    char setting_city[15];
+    uint8_t setting_city_len;
 }SYSTEM_DATA_T;
 
 typedef enum{

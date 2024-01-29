@@ -869,9 +869,9 @@ static void http_perform_as_stream_reader(void)
 //     };
 //     esp_http_client_handle_t client = esp_http_client_init(&config);
 //     esp_err_t err;
-//     const char *post_data = "Using a Palant¨ªr requires a person with great strength of will and wisdom. The Palant¨ªri were meant to "
-//                             "be used by the D¨²nedain to communicate throughout the Realms in Exile. During the War of the Ring, "
-//                             "the Palant¨ªri were used by many individuals. Sauron used the Ithil-stone to take advantage of the users "
+//     const char *post_data = "Using a PalantÃ­r requires a person with great strength of will and wisdom. The PalantÃ­ri were meant to "
+//                             "be used by the DÃºnedain to communicate throughout the Realms in Exile. During the War of the Ring, "
+//                             "the PalantÃ­ri were used by many individuals. Sauron used the Ithil-stone to take advantage of the users "
 //                             "of the other two stones, the Orthanc-stone and Anor-stone, but was also susceptible to deception himself.";
 //     esp_http_client_set_method(client, HTTP_METHOD_POST);
 //     esp_http_client_set_post_field(client, post_data, strlen(post_data));

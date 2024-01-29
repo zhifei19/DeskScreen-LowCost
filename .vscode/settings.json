@@ -5,5 +5,10 @@
         "target/esp32.cfg"
     ],
     "idf.portWin": "COM7",
-    "idf.flashType": "UART"
+    "idf.flashType": "UART",
+    "files.associations": {
+        "ds_ap_sta.h": "c",
+        "ds_system_data.h": "c",
+        "ds_wifi_scan.h": "c"
+    }
 }

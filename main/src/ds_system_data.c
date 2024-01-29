@@ -163,3 +163,16 @@ uint8_t get_tp_action_status(void)
 {
     return sysdata_handler.tp_action_manage.status;
 }
+
+
+void set_system_data_tomato_info(uint8_t work_time, uint8_t reset_time, uint8_t time_count)
+{
+
+}
+
+
+void set_system_data_city_info(char *p_city)
+{
+
+    
+}

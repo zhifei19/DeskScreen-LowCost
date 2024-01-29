@@ -4,6 +4,7 @@
 #include <sys/unistd.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include "cJSON.h"
 
 #include "esp_err.h"
 #include "esp_log.h"
@@ -212,6 +213,7 @@ static esp_err_t download_get_handler(httpd_req_t *req)
 
     /* If name has trailing '/', respond with directory contents */
     if (filename[strlen(filename) - 1] == '/') {
+        ESP_LOGI(TAG, "Respond with directory contents");
         return http_resp_dir_html(req, filepath);
     }
 
@@ -433,6 +435,197 @@ static esp_err_t delete_post_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+/* Handler to send wifi data */
+static esp_err_t send_wifi_handler(httpd_req_t *req)
+{
+    /* Retrieve the pointer to scratch buffer for temporary storage */
+    char *buf = ((struct file_server_data *)req->user_ctx)->scratch;
+    int received;
+
+    /* Content length of the request gives
+     * the size of the file being uploaded */
+    int remaining = req->content_len;
+
+    while (remaining > 0) {
+
+        ESP_LOGI(TAG, "Remaining size : %d", remaining);
+        /* Receive the file part by part into a buffer */
+        if ((received = httpd_req_recv(req, buf, MIN(remaining, SCRATCH_BUFSIZE))) <= 0) {
+            if (received == HTTPD_SOCK_ERR_TIMEOUT) {
+                /* Retry if timeout occurred */
+                continue;
+            }
+        }
+
+        /* Keep track of remaining size of
+         * the file left to be uploaded */
+        remaining -= received;
+    }
+
+    ESP_LOGI(TAG, "File reception complete");
+
+    /* Redirect onto root to see the updated file list */
+    // httpd_resp_set_status(req, "303 See Other");
+    // httpd_resp_set_hdr(req, "Location", "/");
+#ifdef CONFIG_EXAMPLE_HTTPD_CONN_CLOSE_HEADER
+    httpd_resp_set_hdr(req, "Connection", "close");
+#endif
+    httpd_resp_sendstr(req, "File uploaded successfully");
+
+    cJSON *json = cJSON_Parse(buf);
+
+    /* key:value */
+    cJSON *json_wifi = cJSON_GetObjectItem(json, "wifi_name"); 
+    cJSON *json_code = cJSON_GetObjectItem(json, "wifi_code"); 
+
+    ESP_LOGI(TAG, "wifi data is %s", json_wifi->valuestring);
+    ESP_LOGI(TAG, "code data is %s", json_code->valuestring);
+    cJSON_Delete(json);
+    ESP_LOGI(TAG, "send_wifi_handler running");
+    return ESP_OK;
+}
+
+/* Handler to send tomato clock data */
+static esp_err_t send_tomato_handler(httpd_req_t *req)
+{
+    /* Retrieve the pointer to scratch buffer for temporary storage */
+    char *buf = ((struct file_server_data *)req->user_ctx)->scratch;
+    int received;
+
+    /* Content length of the request gives
+     * the size of the file being uploaded */
+    int remaining = req->content_len;
+
+    while (remaining > 0) {
+
+        ESP_LOGI(TAG, "Remaining size : %d", remaining);
+        /* Receive the file part by part into a buffer */
+        if ((received = httpd_req_recv(req, buf, MIN(remaining, SCRATCH_BUFSIZE))) <= 0) {
+            if (received == HTTPD_SOCK_ERR_TIMEOUT) {
+                /* Retry if timeout occurred */
+                continue;
+            }
+        }
+
+        /* Keep track of remaining size of
+         * the file left to be uploaded */
+        remaining -= received;
+    }
+
+    ESP_LOGI(TAG, "File reception complete");
+
+    /* Redirect onto root to see the updated file list */
+    // httpd_resp_set_status(req, "303 See Other");
+    // httpd_resp_set_hdr(req, "Location", "/");
+#ifdef CONFIG_EXAMPLE_HTTPD_CONN_CLOSE_HEADER
+    httpd_resp_set_hdr(req, "Connection", "close");
+#endif
+    httpd_resp_sendstr(req, "File uploaded successfully");
+
+    cJSON *json = cJSON_Parse(buf);
+
+    /* key:value */
+    cJSON *json_work_time = cJSON_GetObjectItem(json, "work_time"); 
+    cJSON *json_rest_time = cJSON_GetObjectItem(json, "rest_time"); 
+    cJSON *json_time_count = cJSON_GetObjectItem(json, "time_count"); 
+
+    ESP_LOGI(TAG, "work_time is %s", json_work_time->valuestring);
+    ESP_LOGI(TAG, "rest_time is %s", json_rest_time->valuestring);
+    ESP_LOGI(TAG, "time_count is %s", json_time_count->valuestring);
+    cJSON_Delete(json);
+    ESP_LOGI(TAG, "send_tomato_handler running");
+    return ESP_OK;
+}
+
+/* Handler to send city data */
+static esp_err_t send_city_handler(httpd_req_t *req)
+{
+    /* Retrieve the pointer to scratch buffer for temporary storage */
+    char *buf = ((struct file_server_data *)req->user_ctx)->scratch;
+    int received;
+
+    /* Content length of the request gives
+     * the size of the file being uploaded */
+    int remaining = req->content_len;
+
+    while (remaining > 0) {
+
+        ESP_LOGI(TAG, "Remaining size : %d", remaining);
+        /* Receive the file part by part into a buffer */
+        if ((received = httpd_req_recv(req, buf, MIN(remaining, SCRATCH_BUFSIZE))) <= 0) {
+            if (received == HTTPD_SOCK_ERR_TIMEOUT) {
+                /* Retry if timeout occurred */
+                continue;
+            }
+        }
+
+        /* Keep track of remaining size of
+         * the file left to be uploaded */
+        remaining -= received;
+    }
+
+    ESP_LOGI(TAG, "File reception complete");
+
+    /* Redirect onto root to see the updated file list */
+    // httpd_resp_set_status(req, "303 See Other");
+    // httpd_resp_set_hdr(req, "Location", "/");
+#ifdef CONFIG_EXAMPLE_HTTPD_CONN_CLOSE_HEADER
+    httpd_resp_set_hdr(req, "Connection", "close");
+#endif
+    httpd_resp_sendstr(req, "File uploaded successfully");
+
+    cJSON *json = cJSON_Parse(buf);
+
+    /* key:value */
+    cJSON *json_city = cJSON_GetObjectItem(json, "city"); 
+
+    ESP_LOGI(TAG, "city data is %s", json_city->valuestring);
+    cJSON_Delete(json);
+    ESP_LOGI(TAG, "send_city_handler running");
+    return ESP_OK;
+}
+
+/* Handler to send city data */
+static esp_err_t send_back_handler(httpd_req_t *req)
+{
+    /* Retrieve the pointer to scratch buffer for temporary storage */
+    char *buf = ((struct file_server_data *)req->user_ctx)->scratch;
+    int received;
+
+    /* Content length of the request gives
+     * the size of the file being uploaded */
+    int remaining = req->content_len;
+
+    while (remaining > 0) {
+
+        ESP_LOGI(TAG, "Remaining size : %d", remaining);
+        /* Receive the file part by part into a buffer */
+        if ((received = httpd_req_recv(req, buf, MIN(remaining, SCRATCH_BUFSIZE))) <= 0) {
+            if (received == HTTPD_SOCK_ERR_TIMEOUT) {
+                /* Retry if timeout occurred */
+                continue;
+            }
+        }
+
+        /* Keep track of remaining size of
+         * the file left to be uploaded */
+        remaining -= received;
+    }
+
+    ESP_LOGI(TAG, "File reception complete");
+
+    /* Redirect onto root to see the updated file list */
+    // httpd_resp_set_status(req, "303 See Other");
+    // httpd_resp_set_hdr(req, "Location", "/");
+#ifdef CONFIG_EXAMPLE_HTTPD_CONN_CLOSE_HEADER
+    httpd_resp_set_hdr(req, "Connection", "close");
+#endif
+    httpd_resp_sendstr(req, "Post control back successfully");
+
+    ESP_LOGI(TAG, "send_back_handler running");
+    return ESP_OK;
+}
+
 /* Function to start the file server */
 esp_err_t file_server_init(const char *base_path)
 {
@@ -492,6 +685,42 @@ esp_err_t file_server_init(const char *base_path)
         .user_ctx  = server_data    // Pass server data as context
     };
     httpd_register_uri_handler(server, &file_delete);
+
+    /* URI handler for deleting files from server */
+    httpd_uri_t wifi_data = {
+        .uri       = "/wifi_data",   // Match all URIs of type /delete/path/to/file
+        .method    = HTTP_POST,
+        .handler   = send_wifi_handler,
+        .user_ctx  = server_data    // Pass server data as context
+    };
+    httpd_register_uri_handler(server, &wifi_data);
+
+    /* URI handler for deleting files from server */
+    httpd_uri_t tomato_data = {
+        .uri       = "/tomato_data",   // Match all URIs of type /delete/path/to/file
+        .method    = HTTP_POST,
+        .handler   = send_tomato_handler,
+        .user_ctx  = server_data    // Pass server data as context
+    };
+    httpd_register_uri_handler(server, &tomato_data);
+
+    /* URI handler for deleting files from server */
+    httpd_uri_t city_data = {
+        .uri       = "/city_data",   // Match all URIs of type /delete/path/to/file
+        .method    = HTTP_POST,
+        .handler   = send_city_handler,
+        .user_ctx  = server_data    // Pass server data as context
+    };
+    httpd_register_uri_handler(server, &city_data);
+
+    /* URI handler for deleting files from server */
+    httpd_uri_t back_data = {
+        .uri       = "/back",   // Match all URIs of type /delete/path/to/file
+        .method    = HTTP_POST,
+        .handler   = send_back_handler,
+        .user_ctx  = server_data    // Pass server data as context
+    };
+    httpd_register_uri_handler(server, &back_data);
 
     return ESP_OK;
 }

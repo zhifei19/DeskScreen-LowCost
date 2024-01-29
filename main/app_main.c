@@ -11,7 +11,10 @@
 #include "freertos/task.h"
 #include "esp_chip_info.h"
 #include "esp_flash.h"
+#include "esp_event.h"
 #include "esp_log.h"
+#include "esp_system.h"
+#include "esp_wifi.h"
 
 #include "ds_timer.h"
 #include "ds_spiffs.h"
@@ -82,21 +85,22 @@ void app_main(void)
     chip_information_print();
 
     /* Driver initialization */
-    spiffs_init(base_path);
-
-    sysdata_init(ssid, strlen(ssid), password, strlen(password));
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
 
     nvs_init();
 
+    sysdata_init(ssid, strlen(ssid), password, strlen(password));
+
+    ft6336_init();
+
     ds_timer_init();
 
+    spiffs_init(base_path);
     wifi_ap_sta_init();
-
     file_server_init(base_path);
 
     http_client_init();
-
-    ft6336_init();
 
     EPD_interface_init(); 
 
