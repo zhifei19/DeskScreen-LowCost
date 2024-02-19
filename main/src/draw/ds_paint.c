@@ -832,9 +832,11 @@ void ds_ui_show_test(){
     Paint_SelectImage(m_custom_image);
     Paint_Clear(WHITE);
 
-    Paint_DrawCircle(150,150,10,BLACK,5,DRAW_FILL_FULL);
-    Paint_DrawString_CN(50, 80, "hello", WHITE,BLACK);
-    Paint_DrawString_CN(50, 110, "你好", WHITE,BLACK);
+
+    // Paint_DrawCircle(150,150,10,BLACK,5,DRAW_FILL_FULL);
+    // Paint_DrawString_CN(50, 80, "hello", WHITE,BLACK);
+    // Paint_DrawString_CN(50, 110, "你好", WHITE,BLACK);
+
 
     // ds_screen_partial_display(0,151,0,151 ,ds_paint_clean,ds_paint_image_new); 
     EPD_HW_Init();                 // Electronic paper initialization

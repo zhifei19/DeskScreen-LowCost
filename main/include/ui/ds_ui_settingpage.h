@@ -1,0 +1,4 @@
+#ifndef DS_UI_SETTINGPAGE_H
+#define DS_UI_SETTINGPAGE_H
+
+#endif // !DS_UI_SETTINGPAGE_H

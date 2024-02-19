@@ -9,12 +9,14 @@ typedef enum{
     NVS_WIFI_INFO_SAVE,
 }NVS_WIFI_INFO_E;
 
+void nvs_selfcheck(void);
+
 void nvs_init(void);
 
-bool nvs_read_data(void);
+bool nvs_read_wifi_data(void);
 
-void nvs_save_data(void);
+void nvs_save_wifi_data(void);
 
-void nvs_selfcheck(void);
+void nvs_clean_wifi_info();
 
 #endif

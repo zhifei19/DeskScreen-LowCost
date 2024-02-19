@@ -13,15 +13,6 @@ static const char *TAG = "ds_nvs";
 NVS_WIFI_INFO_E wifi_config_flag = NVS_WIFI_INFO_NULL;
 
 
-void nvs_selfcheck(void)
-{
-    nvs_save_data();
-    if(nvs_read_data())
-        ESP_LOGI(TAG,"NVS selfcheck successed");
-    else
-        ESP_LOGI(TAG,"NVS selfcheck failed");
-}
-
 void nvs_init(void)
 {
     // Initialize NVS
@@ -36,7 +27,7 @@ void nvs_init(void)
     nvs_selfcheck();
 }
 
-bool nvs_read_data(void)
+bool nvs_read_wifi_data(void)
 {
     bool ret = false;
     esp_err_t err;
@@ -71,7 +62,7 @@ bool nvs_read_data(void)
     return ret;
 }
 
-void nvs_save_data(void)
+void nvs_save_wifi_data(void)
 {
     esp_err_t err;
     nvs_handle_t my_handle;
@@ -84,6 +75,32 @@ void nvs_save_data(void)
         ESP_ERROR_CHECK(nvs_set_u8(my_handle, "WIFI_flag", wifi_config_flag));
         ESP_ERROR_CHECK(nvs_set_str(my_handle, "SSID", sysdata_get().ssid));
         ESP_ERROR_CHECK(nvs_set_str(my_handle, "Password", sysdata_get().password));
+        ESP_ERROR_CHECK(nvs_commit(my_handle));
+        ESP_LOGI(TAG,"Data saved in NVS");
+        nvs_close(my_handle);
+    }
+}
+
+void nvs_selfcheck(void)
+{
+    nvs_save_wifi_data();
+    if(nvs_read_wifi_data())
+        ESP_LOGI(TAG,"NVS selfcheck successed");
+    else
+        ESP_LOGI(TAG,"NVS selfcheck failed");
+}
+
+void nvs_clean_wifi_info()
+{
+    esp_err_t err;
+    nvs_handle_t my_handle;
+    err = nvs_open("wificonfig", NVS_READWRITE, &my_handle);
+    if (err != ESP_OK) {
+        printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
+    } else {
+        
+        wifi_config_flag = NVS_WIFI_INFO_NULL;
+        ESP_ERROR_CHECK(nvs_set_u8(my_handle, "WIFI_flag", wifi_config_flag));
         ESP_ERROR_CHECK(nvs_commit(my_handle));
         ESP_LOGI(TAG,"Data saved in NVS");
         nvs_close(my_handle);

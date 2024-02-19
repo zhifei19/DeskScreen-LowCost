@@ -1,0 +1,16 @@
+#ifndef DS_UI_PAGE_MANAGE_H
+#define DS_UI_PAGE_MANAGE_H
+
+typedef enum 
+{
+    PAGE_TYPE_MENU = 0,
+    PAGE_TYPE_TIME,
+    PAGE_TYPE_WEATHER,
+    PAGE_TYPE_WORD,
+    PAGE_TYPE_TOMATO,
+    PAGE_TYPE_SETTING,
+    PAGE_TYPE_INIT,
+}PAGE_TYPE_E;
+
+
+#endif

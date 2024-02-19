@@ -82,4 +82,13 @@ void set_netif_init_state(BOOL_STATUS_E status);
 
 uint8_t get_tp_action_status(void);
 
+void set_system_data_wifi_info(char *ssid, char *pwd);
+
+void print_system_data_wifi_info(void);
+
+void set_system_data_tomato_info(char *work_time, char *reset_time, char *time_count);
+
+void set_system_data_city_info(char *p_city);
+
+
 #endif

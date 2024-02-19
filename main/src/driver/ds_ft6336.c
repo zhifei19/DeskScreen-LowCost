@@ -61,8 +61,6 @@ void ft6336_init()
     ESP_ERROR_CHECK(i2c_master_write_data(FT_ID_G_MODE, &temp, 1));
     ESP_ERROR_CHECK(i2c_master_read_data(FT_ID_G_MODE, &r_data, 1));
     ESP_LOGD(TAG, "init G_MODE = %d \n", r_data);
-
-    // xTaskCreate(vTPScanTask, "vTPScanTask", TASK_TPSCAN_STACKSIZE, NULL, TASK_TPSCAN_PRIORITY, NULL);
 }
 
 void ft6336_scan(void)

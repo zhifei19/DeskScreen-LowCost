@@ -19,7 +19,7 @@ void EPD_selftest()
 {
 
   EPD_HW_Init();                 // Electronic paper initialization
-  EPD_WhiteScreen_ALL(gImage_menu); // Refresh the picture in full screen
+  EPD_WhiteScreen_ALL(gImage_main_page); // Refresh the picture in full screen
   vTaskDelay(2000 / portTICK_PERIOD_MS);
 
   //////////////////////Partial refresh digital presentation//////////////////////////////////////

@@ -104,7 +104,9 @@ void app_main(void)
 
     EPD_interface_init(); 
 
-    ds_ui_show_test();
+    // ds_ui_show_test();
+
+    EPD_selftest();
 
 
     xTaskCreate(vBackgroundTask, "NAME", TASK_BACKGROUND_STACKSIZE, NULL, TASK_BACKGROUND_PRIORITY, NULL);

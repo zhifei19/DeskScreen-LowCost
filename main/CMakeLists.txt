@@ -24,6 +24,7 @@ idf_component_register(SRCS
                             
 
                             "src/ds_system_data.c"
+                            "src/data/ds_data_image.c"
                         INCLUDE_DIRS 
                             "."
                             "./include/hal"

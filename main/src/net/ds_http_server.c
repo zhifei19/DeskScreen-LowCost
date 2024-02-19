@@ -13,6 +13,9 @@
 #include "esp_spiffs.h"
 #include "esp_http_server.h"
 
+#include "ds_system_data.h"
+#include "ds_nvs.h"
+
 /* Max length a file path can have on storage */
 #define FILE_PATH_MAX (ESP_VFS_PATH_MAX + CONFIG_SPIFFS_OBJ_NAME_LEN)
 
@@ -477,9 +480,13 @@ static esp_err_t send_wifi_handler(httpd_req_t *req)
     /* key:value */
     cJSON *json_wifi = cJSON_GetObjectItem(json, "wifi_name"); 
     cJSON *json_code = cJSON_GetObjectItem(json, "wifi_code"); 
-
     ESP_LOGI(TAG, "wifi data is %s", json_wifi->valuestring);
     ESP_LOGI(TAG, "code data is %s", json_code->valuestring);
+
+    set_system_data_wifi_info(json_wifi->valuestring, json_code->valuestring);
+    nvs_save_wifi_data();
+    print_system_data_wifi_info();
+
     cJSON_Delete(json);
     ESP_LOGI(TAG, "send_wifi_handler running");
     return ESP_OK;

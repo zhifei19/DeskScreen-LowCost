@@ -9,6 +9,13 @@
     "files.associations": {
         "ds_ap_sta.h": "c",
         "ds_system_data.h": "c",
-        "ds_wifi_scan.h": "c"
+        "ds_wifi_scan.h": "c",
+        "stdio.h": "c",
+        "ds_nvs.h": "c",
+        "ds_ft6336.h": "c",
+        "ds_screen.h": "c",
+        "ds_ui_menupage.h": "c",
+        "ds_data_image.h": "c",
+        "ds_paint.h": "c"
     }
 }

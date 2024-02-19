@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "esp_log.h"
 
@@ -165,14 +166,68 @@ uint8_t get_tp_action_status(void)
 }
 
 
-void set_system_data_tomato_info(uint8_t work_time, uint8_t reset_time, uint8_t time_count)
+void set_system_data_wifi_info(char *ssid, char *pwd)
 {
+    uint8_t ssid_len = strlen(ssid);
+    uint8_t pwd_len = strlen(pwd);
+    memcpy(sysdata_handler.ssid, ssid, ssid_len);
+    memcpy(sysdata_handler.password, pwd, pwd_len);
+    sysdata_handler.ssid_len = ssid_len;
+    sysdata_handler.password_len = pwd_len;
+    ESP_LOGI(TAG,"WIFI data stored in system data");
+}
 
+void print_system_data_wifi_info(void)
+{
+    printf("Update WIFI SSID:");
+    for(int i=0;i<sysdata_handler.ssid_len;i++)
+    {
+        printf("%c",sysdata_handler.ssid[i]);
+    }
+    printf("\nUpdate WIFI PASSWORD:");
+    for(int i=0;i<sysdata_handler.password_len;i++)
+    {
+        printf("%c",sysdata_handler.password[i]);
+    }
+}
+
+
+static uint8_t string_to_int(char *input)
+{
+    uint8_t len = strlen(input);
+    uint8_t diff;
+    int num = 0;
+    for(int i=0;i<len;i++)
+    {
+        diff = input[0] - '0';
+        diff = pow(10,len-i);
+        num += diff;
+    }
+    printf("int is %d\n", num);
+    return num;
+}
+
+
+void set_system_data_tomato_info(char *work_time, char *reset_time, char *time_count)
+{
+    uint8_t int_work_time;
+    uint8_t int_reset_time;
+    uint8_t int_time_count;
+    int_work_time = string_to_int(work_time);
+    int_reset_time = string_to_int(reset_time);
+    int_time_count = string_to_int(time_count);
+
+    sysdata_handler.tomato_work_time = int_work_time;
+    sysdata_handler.tomato_reset_time = int_reset_time;
+    sysdata_handler.tomato_time_count = int_time_count;
+    ESP_LOGI(TAG,"Tomato clock data stored in system data");
 }
 
 
 void set_system_data_city_info(char *p_city)
 {
-
-    
+    sysdata_handler.setting_city_len = strlen(p_city);
+    memcpy(sysdata_handler.setting_city, p_city, sysdata_handler.setting_city_len);
+    printf("city_len is %d\ncity name is %s",sysdata_handler.setting_city_len,sysdata_handler.setting_city);
+    ESP_LOGI(TAG,"City data stored in system data");
 }
