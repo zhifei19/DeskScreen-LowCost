@@ -12,7 +12,7 @@ typedef enum{
 }BOOL_STATUS_E;
 
 typedef enum{
-    TP_ACTION_NULL,
+    TP_ACTION_NULL=0,
     TP_ACTION_SHORT,
     TP_ACTION_LONG,
     TP_ACTION_MOVE_LEFT,

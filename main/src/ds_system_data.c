@@ -5,6 +5,8 @@
 #include <math.h>
 
 #include "esp_log.h"
+#include "ds_ui_page_manage.h"
+#include "ds_conf.h"
 
 SYSTEM_DATA_T   sysdata_handler;
 
@@ -68,9 +70,12 @@ void check_tp_action(void)
     printf("check_tp_action\n");
     sysdata_handler.tp_action_manage.status = 0;
     TP_ACTION_MANAGE_T *m_manage = &sysdata_handler.tp_action_manage;
+
+#ifdef TP_DEBUG_ENABLE
     printf("start point x: %d, y:%d\n stop point x:%d, y%d\n",
                         m_manage->tp_start_x, m_manage->tp_start_y, 
                         m_manage->tp_stop_x, m_manage->tp_stop_y);
+#endif // TP_DEBUG_ENABLE
                         
     distance_x = m_manage->tp_stop_x - m_manage->tp_start_x;
     distance_y = m_manage->tp_stop_y - m_manage->tp_start_y;
@@ -82,46 +87,48 @@ void check_tp_action(void)
         {
             ESP_LOGI(TAG,"Action TP_ACTION_LONG");
             m_manage->tp_action = TP_ACTION_LONG;
-            // ds_ui_page_manage_send_event(m_manage->tp_action,m_manage->tp_stop_x,m_manage->tp_stop_y);
+            ds_ui_page_manage_send_event(m_manage->tp_action,m_manage->tp_stop_x,m_manage->tp_stop_y);
             return;
         }
         else
         {
             ESP_LOGI(TAG,"Action TP_ACTION_SHORT");
             m_manage->tp_action = TP_ACTION_SHORT;
-            // ds_ui_page_manage_send_event(m_manage->tp_action,m_manage->tp_stop_x,m_manage->tp_stop_y);
+            ds_ui_page_manage_send_event(m_manage->tp_action,m_manage->tp_stop_x,m_manage->tp_stop_y);
             return;
         }
     }
     else
     {
+#ifdef TP_DEBUG_ENABLE
         printf("distance_x: %d\n distance_y: %d\n abs_x: %d\n abs_y: %d\n",distance_x,distance_y,abs_x,abs_y);
-        if(distance_x < -10 && abs_x > abs_y)
+#endif // TP_DEBUG_ENABLE
+        if(distance_x < -50 && abs_x > abs_y)
         {
             ESP_LOGI(TAG,"Action TP_ACTION_MOVE_LEFT");
             m_manage->tp_action = TP_ACTION_MOVE_LEFT;
-            // ds_ui_page_manage_send_event(m_manage->tp_action,m_manage->tp_stop_x,m_manage->tp_stop_y);
+            ds_ui_page_manage_send_event(m_manage->tp_action,m_manage->tp_stop_x,m_manage->tp_stop_y);
             return;
         }
-        else if(distance_x > 10 && abs_x > abs_y)
+        else if(distance_x > 50 && abs_x > abs_y)
         {
             ESP_LOGI(TAG,"Action TP_ACTION_MOVE_RIGHT");
             m_manage->tp_action = TP_ACTION_MOVE_RIGHT;
-            // ds_ui_page_manage_send_event(m_manage->tp_action,m_manage->tp_stop_x,m_manage->tp_stop_y);
+            ds_ui_page_manage_send_event(m_manage->tp_action,m_manage->tp_stop_x,m_manage->tp_stop_y);
             return;
         }
-        else if(distance_y > 10 && abs_y > abs_x)
+        else if(distance_y > 50 && abs_y > abs_x)
         {
             ESP_LOGI(TAG,"Action TP_ACTION_MOVE_DOWN");
             m_manage->tp_action = TP_ACTION_MOVE_DOWN;
-            // ds_ui_page_manage_send_event(m_manage->tp_action,m_manage->tp_stop_x,m_manage->tp_stop_y);
+            ds_ui_page_manage_send_event(m_manage->tp_action,m_manage->tp_stop_x,m_manage->tp_stop_y);
             return;
         }
-        else if(distance_y < -10 && abs_y > abs_x)
+        else if(distance_y < -50 && abs_y > abs_x)
         {
             ESP_LOGI(TAG,"Action TP_ACTION_MOVE_UP");
             m_manage->tp_action = TP_ACTION_MOVE_UP;
-            // ds_ui_page_manage_send_event(m_manage->tp_action,m_manage->tp_stop_x,m_manage->tp_stop_y);
+            ds_ui_page_manage_send_event(m_manage->tp_action,m_manage->tp_stop_x,m_manage->tp_stop_y);
             return;
         }
     }

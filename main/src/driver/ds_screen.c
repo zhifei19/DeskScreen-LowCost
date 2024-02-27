@@ -19,7 +19,7 @@ void EPD_selftest()
 {
 
   EPD_HW_Init();                 // Electronic paper initialization
-  EPD_WhiteScreen_ALL(gImage_main_page); // Refresh the picture in full screen
+  EPD_WhiteScreen_ALL(gImage_mainpage); // Refresh the picture in full screen
   vTaskDelay(2000 / portTICK_PERIOD_MS);
 
   //////////////////////Partial refresh digital presentation//////////////////////////////////////
@@ -47,9 +47,9 @@ void EPD_selftest()
 void EPD_HW_Init(void)
 {
   gpio_set_screen_res(0);
-  vTaskDelay(1 / portTICK_PERIOD_MS);
+  vTaskDelay(10 / portTICK_PERIOD_MS);
   gpio_set_screen_res(1); // hard reset
-  vTaskDelay(1 / portTICK_PERIOD_MS);
+  vTaskDelay(10 / portTICK_PERIOD_MS);
 
   Epaper_READBUSY();
   spi_send_cmd(0x12); // SWRESET

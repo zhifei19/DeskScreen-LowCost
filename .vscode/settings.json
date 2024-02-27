@@ -16,6 +16,13 @@
         "ds_screen.h": "c",
         "ds_ui_menupage.h": "c",
         "ds_data_image.h": "c",
-        "ds_paint.h": "c"
+        "ds_paint.h": "c",
+        "ds_ui_timepage.h": "c",
+        "ds_ui_weatherpage.h": "c",
+        "ds_ui_wordpage.h": "c",
+        "ds_ui_tomatopage.h": "c",
+        "ds_ui_settingpage.h": "c",
+        "ds_ui_page_manage.h": "c",
+        "ds_spi.h": "c"
     }
 }

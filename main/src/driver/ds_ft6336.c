@@ -104,7 +104,10 @@ void ft6336_scan(void)
             TPR_Structure.TouchSta &= 0xe0; // 清除触摸点有效标记
         }
     }
+#ifdef HEAP_SIZE_ENABLE
     printf("free_heap_size = %ld\n", esp_get_free_heap_size());
+#endif // !HEAP_SIZE_ENABLE
+
 }
 
 void ft6336_get_TouchPoint(TP_POSITION_T *position)

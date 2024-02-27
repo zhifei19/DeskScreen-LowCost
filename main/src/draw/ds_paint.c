@@ -79,6 +79,10 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+#define EPD_2IN9BC_WIDTH       200
+#define EPD_2IN9BC_HEIGHT      200
+#define IMAGE_SIZE (((EPD_2IN9BC_WIDTH % 8 == 0) ? (EPD_2IN9BC_WIDTH / 8 ) : (EPD_2IN9BC_WIDTH / 8 + 1)) * EPD_2IN9BC_HEIGHT)
+
 static const char *TAG = "ds_paint";
 
 PAINT Paint;
@@ -816,9 +820,6 @@ void ds_paint_image_copy(){
     memcpy(gImage_last_page,Paint.Image,ALLSCREEN_GRAGHBYTES);
 }
 
-#define EPD_2IN9BC_WIDTH       200
-#define EPD_2IN9BC_HEIGHT      200
-#define IMAGE_SIZE (((EPD_2IN9BC_WIDTH % 8 == 0) ? (EPD_2IN9BC_WIDTH / 8 ) : (EPD_2IN9BC_WIDTH / 8 + 1)) * EPD_2IN9BC_HEIGHT)
 
 void ds_ui_show_test(){
 

@@ -32,6 +32,7 @@
 #include "ds_paint.h"
 #include "ds_ap_sta.h"
 #include "ds_conf.h"
+#include "ds_ui_page_manage.h"
 
 static const char *TAG = "MAIN APP";
 
@@ -106,8 +107,9 @@ void app_main(void)
 
     // ds_ui_show_test();
 
-    EPD_selftest();
+    // EPD_selftest();
 
+    ds_ui_page_manage_init();
 
     xTaskCreate(vBackgroundTask, "NAME", TASK_BACKGROUND_STACKSIZE, NULL, TASK_BACKGROUND_PRIORITY, NULL);
 
@@ -118,6 +120,6 @@ void app_main(void)
 
         printf("System run...\n");
 
-        vTaskDelay(10000 / portTICK_PERIOD_MS);
+        vTaskDelay(50000 / portTICK_PERIOD_MS);
     }
 }

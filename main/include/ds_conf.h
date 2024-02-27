@@ -22,7 +22,8 @@
 #define TASK_TP_GPIO_PRIORITY           10
 #define TASK_TP_GPIO_STACKSIZE          2048
 
-
+// #define TP_DEBUG_ENABLE
+// #define HEAP_SIZE_ENABLE
 
 
 

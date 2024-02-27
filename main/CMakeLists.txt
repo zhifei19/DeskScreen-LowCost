@@ -21,6 +21,14 @@ idf_component_register(SRCS
                             "src/net/ds_wifi_sta.c"
                             "src/net/ds_wifi_scan.c"
                             "src/net/ds_ap_sta.c"
+
+                            "src/ui/ds_ui_menupage.c"
+                            "src/ui/ds_ui_page_manage.c"
+                            "src/ui/ds_ui_settingpage.c"
+                            "src/ui/ds_ui_timepage.c"
+                            "src/ui/ds_ui_tomatopage.c"
+                            "src/ui/ds_ui_weatherpage.c"
+                            "src/ui/ds_ui_wordpage.c"
                             
 
                             "src/ds_system_data.c"
@@ -33,6 +41,7 @@ idf_component_register(SRCS
                             "./include/data"
                             "./include/net"
                             "./include/draw"
+                            "./include/ui"
                             "./include"
                             
                         EMBED_FILES 

@@ -28,8 +28,8 @@ void vTimerTask(void *pvParameters)
 {
     timer_queue_element_t ele;
     TP_POSITION_T position = {0};
-    int minus_status_count = 0, plus_status_count = 0;
-    UBaseType_t istack;
+    // int minus_status_count = 0, plus_status_count = 0;
+    // UBaseType_t istack;
     for(;;)
     {
         xQueueReceive(timer_queue, &ele, portMAX_DELAY);
@@ -38,16 +38,16 @@ void vTimerTask(void *pvParameters)
         count_tp_action_manage_time();
         if(get_tp_action_status()<=2 && get_tp_action_status()>0)
         {
-            printf("minus_status_count: %d \n",minus_status_count++);
-            ft6336_get_TouchPoint(&position);
+            // printf("minus_status_count: %d \n",minus_status_count++);
+            // ft6336_get_TouchPoint(&position);
             set_tp_action_manage_start_point(position.x, position.y);
             
         }
         else if(get_tp_action_status()>2)
         {
-            printf("plus_status_count: %d \n",plus_status_count++);
-            istack = uxTaskGetStackHighWaterMark(NULL);
-            printf("vTimerTask istack = %d\n", istack);
+            // printf("plus_status_count: %d \n",plus_status_count++);
+            // istack = uxTaskGetStackHighWaterMark(NULL);
+            // printf("vTimerTask istack = %d\n", istack);
             ft6336_get_TouchPoint(&position);
             set_tp_action_manage_stop_point(position.x, position.y);
 
