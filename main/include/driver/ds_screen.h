@@ -29,4 +29,7 @@ void EPD_Dis_Part(unsigned int x_start,unsigned int y_start,const unsigned char 
 void EPD_selftest(void);
 void EPD_interface_init(void);
 
+void ds_screen_partial_data_add(unsigned int x_start,unsigned int x_end,unsigned int y_start,unsigned int y_end ,const uint8_t *data);
+void ds_screen_partial_data_copy(void);
+
 #endif

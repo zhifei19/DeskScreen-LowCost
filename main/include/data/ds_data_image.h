@@ -11,4 +11,6 @@ extern const unsigned char gImage_back[];
 
 extern const unsigned char gImage_setting[];
 
+extern const unsigned char gImage_colon[];
+
 #endif

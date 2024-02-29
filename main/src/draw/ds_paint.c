@@ -79,6 +79,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+#include "ds_data_image.h"
+
 #define EPD_2IN9BC_WIDTH       200
 #define EPD_2IN9BC_HEIGHT      200
 #define IMAGE_SIZE (((EPD_2IN9BC_WIDTH % 8 == 0) ? (EPD_2IN9BC_WIDTH / 8 ) : (EPD_2IN9BC_WIDTH / 8 + 1)) * EPD_2IN9BC_HEIGHT)
@@ -780,76 +782,6 @@ void Paint_DrawString_CN(UWORD Xstart, UWORD Ystart, const char * pString,
     }
 }
 
-//图片全刷
-void ds_paint_image(void){
-    unsigned int i;
-    spi_send_cmd(0x10);
-    for(i=0;i<ALLSCREEN_GRAGHBYTES;i++){
-        spi_send_data(0x00);  
-    }
-    spi_send_cmd(0x13);
-    for(i=0;i<ALLSCREEN_GRAGHBYTES;i++){
-        spi_send_data(Paint.Image[i]);  
-    }           
-}
-
-unsigned char gImage_last_page[ALLSCREEN_GRAGHBYTES];
-
-void ds_paint_last_page(void){
-    unsigned int i;
-    for(i=0;i<ALLSCREEN_GRAGHBYTES;i++){
-        spi_send_data(~gImage_last_page[i]);  
-    }           
-}
-
-void ds_paint_image_new(){
-    unsigned int i;
-    for(i=0;i<ALLSCREEN_GRAGHBYTES;i++){
-        spi_send_data(~Paint.Image[i]);  
-    }       
-}
-
-void ds_paint_clean(void){
-    unsigned int i;
-    for(i=0;i<ALLSCREEN_GRAGHBYTES;i++){
-        spi_send_data(0);  
-    }           
-}
-
-void ds_paint_image_copy(){
-    memcpy(gImage_last_page,Paint.Image,ALLSCREEN_GRAGHBYTES);
-}
-
-
-void ds_ui_show_test(){
-
-    uint8_t *m_custom_image;
-    printf("IMAGE_SIZE %d\n",IMAGE_SIZE);
-    if ((m_custom_image = (uint8_t *)malloc(IMAGE_SIZE)) == NULL) {
-      printf("Failed to apply for black memory...\r\n");
-      return ;
-    }
-    Paint_NewImage(m_custom_image, EPD_2IN9BC_WIDTH, EPD_2IN9BC_HEIGHT, 0, WHITE);
-    Paint_SelectImage(m_custom_image);
-    Paint_Clear(WHITE);
-
-
-    // Paint_DrawCircle(150,150,10,BLACK,5,DRAW_FILL_FULL);
-    // Paint_DrawString_CN(50, 80, "hello", WHITE,BLACK);
-    // Paint_DrawString_CN(50, 110, "你好", WHITE,BLACK);
-
-
-    // ds_screen_partial_display(0,151,0,151 ,ds_paint_clean,ds_paint_image_new); 
-    EPD_HW_Init();                 // Electronic paper initialization
-    EPD_WhiteScreen_ALL(Paint.Image); // Refresh the picture in full screen
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-    EPD_DeepSleep(); // Sleep
-    printf("ds_ui_show_test finished\n");
-
-    // ds_paint_image_copy();
-    free(m_custom_image);
-}
-
 /******************************************************************************
 function:	Display nummber
 parameter:
@@ -1033,3 +965,76 @@ void Paint_DrawBitMap_Paste(const unsigned char* image_buffer, UWORD xStart, UWO
 }
 
 
+
+//图片全刷
+void ds_paint_image(void){
+    unsigned int i;
+    spi_send_cmd(0x10);
+    for(i=0;i<ALLSCREEN_GRAGHBYTES;i++){
+        spi_send_data(0x00);  
+    }
+    spi_send_cmd(0x13);
+    for(i=0;i<ALLSCREEN_GRAGHBYTES;i++){
+        spi_send_data(Paint.Image[i]);  
+    }           
+}
+
+unsigned char gImage_last_page[ALLSCREEN_GRAGHBYTES];
+
+void ds_paint_last_page(void){
+    unsigned int i;
+    for(i=0;i<ALLSCREEN_GRAGHBYTES;i++){
+        spi_send_data(~gImage_last_page[i]);  
+    }           
+}
+
+void ds_paint_image_new(){
+    unsigned int i;
+    for(i=0;i<ALLSCREEN_GRAGHBYTES;i++){
+        spi_send_data(~Paint.Image[i]);  
+    }       
+}
+
+void ds_paint_clean(void){
+    unsigned int i;
+    for(i=0;i<ALLSCREEN_GRAGHBYTES;i++){
+        spi_send_data(0);  
+    }           
+}
+
+void ds_paint_image_copy(){
+    memcpy(gImage_last_page,Paint.Image,ALLSCREEN_GRAGHBYTES);
+}
+
+void ds_ui_show_test(){
+
+    uint8_t *m_custom_image;
+    printf("IMAGE_SIZE %d\n",IMAGE_SIZE);
+    if ((m_custom_image = (uint8_t *)malloc(IMAGE_SIZE)) == NULL) {
+      printf("Failed to apply for black memory...\r\n");
+      return ;
+    }
+    Paint_NewImage(m_custom_image, EPD_2IN9BC_WIDTH, EPD_2IN9BC_HEIGHT, 0, WHITE);
+    Paint_SelectImage(m_custom_image);
+    Paint_Clear(WHITE);
+
+
+    // Paint_DrawCircle(150,150,10,BLACK,5,DRAW_FILL_FULL);
+    // Paint_DrawString_CN(50, 80, "hello", WHITE,BLACK);
+    // Paint_DrawString_CN(50, 110, "你好", WHITE,BLACK);
+    Paint_DrawString_CN(50, 110, "12", WHITE,BLACK);
+    Paint_DrawBitMap_Paste(gImage_back, 0, 0, 40, 40, BLACK);
+    Paint_DrawBitMap_Paste(gImage_colon, 100, 100, 8, 40, BLACK);
+
+
+
+    // ds_screen_partial_display(0,151,0,151 ,ds_paint_clean,ds_paint_image_new); 
+    EPD_HW_Init();                 // Electronic paper initialization
+    EPD_WhiteScreen_ALL(Paint.Image); // Refresh the picture in full screen
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    EPD_DeepSleep(); // Sleep
+    printf("ds_ui_show_test finished\n");
+
+    // ds_paint_image_copy();
+    free(m_custom_image);
+}

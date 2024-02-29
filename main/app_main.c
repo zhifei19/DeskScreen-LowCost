@@ -105,7 +105,7 @@ void app_main(void)
 
     EPD_interface_init(); 
 
-    // ds_ui_show_test();
+    ds_ui_show_test();
 
     // EPD_selftest();
 

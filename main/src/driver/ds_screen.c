@@ -254,4 +254,47 @@ void EPD_WhiteScreen_White(void)
   EPD_Update();
 }
 
+
+
+uint8_t partial_data[200][25];
+uint8_t partial_data_array[5000];
+
+void ds_screen_partial_data_init(){
+	for(int index = 0;index < 200 ;index ++){
+		for(int yindex = 0;yindex < 25 ;yindex ++){
+			partial_data[index][yindex] = 0xff;
+		}
+	}
+}
+
+void ds_screen_partial_data_add(unsigned int x_start,unsigned int x_end,unsigned int y_start,unsigned int y_end ,const uint8_t *data){
+	uint8_t x_len = x_end - x_start;
+	uint8_t x_data_location = x_start/8;   
+	uint8_t x_size = x_len/8;   
+	int data_index = 0;
+	if(x_start % 8 != 0){
+		x_data_location ++;
+	}
+	if(x_len % 8 != 0){
+		x_size ++;
+	}
+	for(int x_index = y_start ;x_index < y_end;x_index ++){
+		for(int y_index = x_data_location ;y_index < (x_data_location+x_size);y_index ++){
+			partial_data[x_index][y_index] = (~data[data_index]);
+			data_index++;
+		}
+	}
+}
+
+void ds_screen_partial_data_copy(void){
+	int data_index = 0;
+	for(int index = 0;index < 200 ;index ++){
+		for(int yindex = 0;yindex < 25 ;yindex ++){
+			partial_data_array[data_index] = (~partial_data[index][yindex]);
+			data_index ++;
+		}
+	}
+  EPD_WhiteScreen_ALL(partial_data_array);
+}
+
 //////////////////////////////////END//////////////////////////////////////////////////
