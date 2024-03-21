@@ -48,6 +48,12 @@ typedef struct {
 
     char setting_city[15];
     uint8_t setting_city_len;
+
+    char hour[3];
+    char minute[3];
+    char second[3];
+
+    uint8_t test;
 }SYSTEM_DATA_T;
 
 typedef enum{
@@ -89,6 +95,8 @@ void print_system_data_wifi_info(void);
 void set_system_data_tomato_info(char *work_time, char *reset_time, char *time_count);
 
 void set_system_data_city_info(char *p_city);
+
+void ds_update_system_time(char *hour, char *minute, char *second);
 
 
 #endif

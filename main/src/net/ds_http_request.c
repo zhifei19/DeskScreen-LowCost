@@ -23,6 +23,7 @@
 
 #include "esp_http_client.h"
 #include "ds_http_request.h"
+#include "ds_system_data.h"
 
 #define MAX_HTTP_RECV_BUFFER 512
 #define MAX_HTTP_OUTPUT_BUFFER 2048
@@ -97,11 +98,14 @@ void cjson_weather_info(char *text)
 
 void cjson_time_info(char *text)
 {
+    char *recv_time;
     cJSON *json = cJSON_Parse(text);
 
     cJSON *json_time = cJSON_GetObjectItem(json, "sysTime1"); 
 
-    ESP_LOGI(TAG, "time is %s", json_time->valuestring);
+    recv_time = json_time->valuestring;
+    ESP_LOGI(TAG, "time is %s", recv_time);
+    ds_update_system_time(&recv_time[8], &recv_time[10], &recv_time[12]);
     cJSON_Delete(json);
 }
 

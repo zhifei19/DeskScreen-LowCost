@@ -8,7 +8,7 @@
 #include "ds_ui_page_manage.h"
 #include "ds_conf.h"
 
-SYSTEM_DATA_T   sysdata_handler;
+static SYSTEM_DATA_T sysdata_handler;
 
 static const char *TAG = "ds_system_data";
 
@@ -22,6 +22,9 @@ void sysdata_init(char *p_ssid, uint32_t p_ssidlen, char *p_password, uint32_t p
 
 SYSTEM_DATA_T sysdata_get()
 {
+    ESP_LOGI(TAG, "sysdata_get().hour is %s\n",sysdata_handler.hour);
+    ESP_LOGI(TAG, "sysdata_get().password is %s\n",sysdata_handler.password);
+    ESP_LOGI(TAG, "sysdata_get().test is %d\n",sysdata_handler.test);
     return sysdata_handler;
 }
 
@@ -237,4 +240,15 @@ void set_system_data_city_info(char *p_city)
     memcpy(sysdata_handler.setting_city, p_city, sysdata_handler.setting_city_len);
     printf("city_len is %d\ncity name is %s",sysdata_handler.setting_city_len,sysdata_handler.setting_city);
     ESP_LOGI(TAG,"City data stored in system data");
+}
+
+void ds_update_system_time(char *hour, char *minute, char *second)
+{
+    strncpy(sysdata_handler.hour, hour, 2);
+    strncpy(sysdata_handler.minute, minute, 2);
+    strncpy(sysdata_handler.second, second, 2);
+    printf("sysdata_handler.hour is %s\n",sysdata_handler.hour);
+    printf("sysdata_handler.minute is %s\n",sysdata_handler.minute);
+    printf("sysdata_handler.second is %s\n",sysdata_handler.second);
+    sysdata_handler.test = 6;
 }

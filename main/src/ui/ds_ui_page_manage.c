@@ -144,19 +144,21 @@ static void ui_page_task(void* arg)
 
         case PAGE_TYPE_WEATHER:
             ds_http_request_type(HTTP_GET_WEATHER);
-            ds_ui_show_weather();
+            ds_ui_show_time();
             break;
 
         case PAGE_TYPE_WORD:
-            ds_ui_show_word();
+            ds_http_request_type(HTTP_GET_TIME);
+            ds_ui_show_time();
             break;
 
         case PAGE_TYPE_TOMATO:
-            ds_ui_show_tomato();
+            ds_ui_show_time();
             break;
 
         case PAGE_TYPE_SETTING:
-            ds_ui_show_setting();
+            ds_http_request_type(HTTP_GET_TIME);
+            ds_ui_show_time();
             break;
 
         default:
