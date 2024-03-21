@@ -22,7 +22,7 @@ void ds_ui_show_time(void)
     // EPD_Dis_Part(0, 200, gImage_back, 40, 40);
     // EPD_Dis_Part(96, 96, gImage_colon, 40, 8);
     EPD_HW_Init();
-    ds_screen_partial_data_add(0, 200, 0, 200, gImage_mainpage);
+    // ds_screen_partial_data_add(0, 200, 0, 200, gImage_mainpage);
     ds_screen_partial_data_add(0, 40, 0, 40, gImage_back);
     ds_screen_partial_data_add(96, 104, 96, 136, gImage_colon);
     ds_screen_partial_data_copy();

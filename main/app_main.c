@@ -33,6 +33,7 @@
 #include "ds_ap_sta.h"
 #include "ds_conf.h"
 #include "ds_ui_page_manage.h"
+#include "ds_ui_menupage.h"
 
 static const char *TAG = "MAIN APP";
 
@@ -105,9 +106,10 @@ void app_main(void)
 
     EPD_interface_init(); 
 
-    ds_ui_show_test();
+    // ds_ui_show_test();
 
     // EPD_selftest();
+    ds_ui_show_menu();
 
     ds_ui_page_manage_init();
 

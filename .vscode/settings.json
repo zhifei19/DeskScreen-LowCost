@@ -23,6 +23,7 @@
         "ds_ui_tomatopage.h": "c",
         "ds_ui_settingpage.h": "c",
         "ds_ui_page_manage.h": "c",
-        "ds_spi.h": "c"
+        "ds_spi.h": "c",
+        "ds_conf.h": "c"
     }
 }

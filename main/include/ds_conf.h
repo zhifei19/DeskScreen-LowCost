@@ -22,6 +22,9 @@
 #define TASK_TP_GPIO_PRIORITY           10
 #define TASK_TP_GPIO_STACKSIZE          2048
 
+#define TASK_HTTP_REQUEST_PRIORITY      5
+#define TASK_HTTP_REQUEST_STACKSIZE     8192
+
 // #define TP_DEBUG_ENABLE
 // #define HEAP_SIZE_ENABLE
 

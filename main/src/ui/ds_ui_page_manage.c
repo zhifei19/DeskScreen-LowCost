@@ -5,6 +5,7 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "ds_system_data.h"
+#include "ds_http_request.h"
 #include "esp_log.h"
 
 #include "ds_ui_menupage.h"
@@ -29,7 +30,7 @@ static QueueHandle_t ui_page_manager_queue = NULL;
 
 static const char *TAG = "ds_page_manage";
 
-PAGE_TYPE_E page_status = PAGE_TYPE_INIT;
+PAGE_TYPE_E page_status = PAGE_TYPE_MENU;
 
 void ds_ui_page_manage_send_event(TP_ACTION_E act, uint8_t t_x, uint8_t t_y)
 {
@@ -56,17 +57,12 @@ static void ui_page_task(void* arg)
                         evt.action is %d\n",
                         evt.touch_x, evt.touch_y, evt.action);
         ESP_LOGI(TAG,"xQueueReceive end");
+
+        // page switching logic
         switch (page_status)
         {
         case PAGE_TYPE_INIT:
             ESP_LOGI(TAG,"PAGE_TYPE_INIT start");
-            ds_ui_show_menu();
-            // ds_ui_init_menu();
-            ds_ui_init_time();
-            ds_ui_init_weather();
-            ds_ui_init_word();
-            ds_ui_init_tomato();
-            ds_ui_init_setting();
             page_status = PAGE_TYPE_MENU;
             break;
         case PAGE_TYPE_MENU:
@@ -102,37 +98,68 @@ static void ui_page_task(void* arg)
             break;
         
         case PAGE_TYPE_TIME:
-            /* code */
             ESP_LOGI(TAG,"PAGE_TYPE_TIME start");
-            ds_ui_show_time();
             break;
 
         case PAGE_TYPE_WEATHER:
-            /* code */
             ESP_LOGI(TAG,"PAGE_TYPE_WEATHER start");
-            ds_ui_show_weather();
             break;
 
         case PAGE_TYPE_WORD:
-            /* code */
             ESP_LOGI(TAG,"PAGE_TYPE_WORD start");
-            ds_ui_show_word();
             break;
 
         case PAGE_TYPE_TOMATO:
             /* code */
             ESP_LOGI(TAG,"PAGE_TYPE_TOMATO start");
+            break;
+
+        case PAGE_TYPE_SETTING:
+            ESP_LOGI(TAG,"PAGE_TYPE_SETTING start");
+            break;
+
+        default:
+            break;
+        }
+        
+        switch (page_status)
+        {
+        case PAGE_TYPE_INIT:
+            ds_ui_show_menu();
+            // ds_ui_init_menu();
+            ds_ui_init_time();
+            ds_ui_init_weather();
+            ds_ui_init_word();
+            ds_ui_init_tomato();
+            ds_ui_init_setting();
+            break;
+        case PAGE_TYPE_MENU:
+            ds_ui_show_menu();
+            break;
+        
+        case PAGE_TYPE_TIME:
+            ds_http_request_type(HTTP_GET_TIME);
+            ds_ui_show_time();
+            break;
+
+        case PAGE_TYPE_WEATHER:
+            ds_http_request_type(HTTP_GET_WEATHER);
+            ds_ui_show_weather();
+            break;
+
+        case PAGE_TYPE_WORD:
+            ds_ui_show_word();
+            break;
+
+        case PAGE_TYPE_TOMATO:
             ds_ui_show_tomato();
             break;
 
         case PAGE_TYPE_SETTING:
-            /* code */
-            ESP_LOGI(TAG,"PAGE_TYPE_SETTING start");
             ds_ui_show_setting();
             break;
 
         default:
-            ESP_LOGI(TAG,"default state");
             break;
         }
     }

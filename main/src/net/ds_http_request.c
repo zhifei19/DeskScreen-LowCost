@@ -7,6 +7,7 @@
 #include "esp_event.h"
 #include "esp_netif.h"
 #include "cJSON.h"
+#include "ds_conf.h"
 // #include "protocol_examples_common.h"
 // #include "protocol_examples_utils.h"
 #include "esp_tls.h"
@@ -26,6 +27,8 @@
 #define MAX_HTTP_RECV_BUFFER 512
 #define MAX_HTTP_OUTPUT_BUFFER 2048
 static const char *TAG = "ds_HTTP_CLIENT";
+
+static QueueHandle_t http_request_queue = NULL;
 
 /* Root cert for howsmyssl.com, taken from howsmyssl_com_root_cert.pem
 
@@ -73,7 +76,7 @@ void cjson_weather_info(char *text)
 {
     cJSON *json = cJSON_Parse(text);
 
-    /* ????key?value */
+    /* key:value */
     cJSON *json_array = cJSON_GetObjectItem(json, "results"); 
     cJSON *json_results = cJSON_GetArrayItem(json_array, 0); 
     cJSON *json_now = cJSON_GetObjectItem(json_results, "now"); 
@@ -84,6 +87,31 @@ void cjson_weather_info(char *text)
     cJSON_Delete(json);
 }
 
+/*
+{
+    "sysTime2":"2024-03-06 13:27:08",
+    "sysTime1":"20240306132708"
+}
+
+*/
+
+void cjson_time_info(char *text)
+{
+    cJSON *json = cJSON_Parse(text);
+
+    cJSON *json_time = cJSON_GetObjectItem(json, "sysTime1"); 
+
+    ESP_LOGI(TAG, "time is %s", json_time->valuestring);
+    cJSON_Delete(json);
+}
+
+void ds_http_request_type(HTTP_REQUEST_TYPE_E type)
+{
+    HTTP_REQUEST_TYPE_E evt;
+    evt = type;
+    xQueueSend(http_request_queue, &evt, 0);
+
+}
 
 esp_err_t _http_event_handler(esp_http_client_event_t *evt)
 {
@@ -188,35 +216,92 @@ esp_err_t _http_weather_event_handler(esp_http_client_event_t *evt)
             break;
         case HTTP_EVENT_ON_DATA:
             ESP_LOGI(TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
+
+            break;
+        case HTTP_EVENT_ON_FINISH:
+            ESP_LOGI(TAG, "HTTP_EVENT_ON_FINISH");
+            if (output_buffer != NULL) {
+                // Response is accumulated in output_buffer. Uncomment the below line to print the accumulated response
+                // ESP_LOG_BUFFER_HEX(TAG, output_buffer, output_len);
+                free(output_buffer);
+                output_buffer = NULL;
+            }
+            output_len = 0;
+            break;
+        case HTTP_EVENT_DISCONNECTED:
+            ESP_LOGI(TAG, "HTTP_EVENT_DISCONNECTED");
+            int mbedtls_err = 0;
+            esp_err_t err = esp_tls_get_and_clear_last_error((esp_tls_error_handle_t)evt->data, &mbedtls_err, NULL);
+            if (err != 0) {
+                ESP_LOGI(TAG, "Last esp error code: 0x%x", err);
+                ESP_LOGI(TAG, "Last mbedtls failure: 0x%x", mbedtls_err);
+            }
+            if (output_buffer != NULL) {
+                free(output_buffer);
+                output_buffer = NULL;
+            }
+            output_len = 0;
+            break;
+        case HTTP_EVENT_REDIRECT:
+            ESP_LOGI(TAG, "HTTP_EVENT_REDIRECT");
+            esp_http_client_set_header(evt->client, "From", "user@example.com");
+            esp_http_client_set_header(evt->client, "Accept", "text/html");
+            esp_http_client_set_redirection(evt->client);
+            break;
+    }
+    return ESP_OK;
+}
+
+esp_err_t _http_time_event_handler(esp_http_client_event_t *evt)
+{
+    static char *output_buffer;  // Buffer to store response of http request from event handler
+    static int output_len;       // Stores number of bytes read
+    switch(evt->event_id) {
+        case HTTP_EVENT_ERROR:
+            break;
+        case HTTP_EVENT_ON_CONNECTED:
+            break;
+        case HTTP_EVENT_HEADER_SENT:
+            break;
+        case HTTP_EVENT_ON_HEADER:
+            break;
+        case HTTP_EVENT_ON_DATA:
+            ESP_LOGI(TAG, "HTTPS_EVENT_ON_DATA, len=%d", evt->data_len);
             /*
              *  Check for chunked encoding is added as the URL for chunked encoding used in this example returns binary data.
              *  However, event handler can also be used in case chunked encoding is used.
              */
-            // if (!esp_http_client_is_chunked_response(evt->client)) {
-            //     // If user_data buffer is configured, copy the response into the buffer
-            //     int copy_len = 0;
-            //     if (evt->user_data) {
-            //         copy_len = MIN(evt->data_len, (MAX_HTTP_OUTPUT_BUFFER - output_len));
-            //         if (copy_len) {
-            //             memcpy(evt->user_data + output_len, evt->data, copy_len);
-            //         }
-            //     } else {
-            //         const int buffer_len = esp_http_client_get_content_length(evt->client);
-            //         if (output_buffer == NULL) {
-            //             output_buffer = (char *) malloc(buffer_len);
-            //             output_len = 0;
-            //             if (output_buffer == NULL) {
-            //                 ESP_LOGE(TAG, "Failed to allocate memory for output buffer");
-            //                 return ESP_FAIL;
-            //             }
-            //         }
-            //         copy_len = MIN(evt->data_len, (buffer_len - output_len));
-            //         if (copy_len) {
-            //             memcpy(output_buffer + output_len, evt->data, copy_len);
-            //         }
-            //     }
-            //     output_len += copy_len;
-            // }
+            if (!esp_http_client_is_chunked_response(evt->client)) {
+                printf("esp_http_client_is_chunked_response check passed\n");
+                // If user_data buffer is configured, copy the response into the buffer
+                int copy_len = 0;
+                if (evt->user_data) {
+                    printf("evt->user_data check passed\n");
+                    copy_len = MIN(evt->data_len, (MAX_HTTP_OUTPUT_BUFFER - output_len));
+                    if (copy_len) {
+                        memcpy(evt->user_data + output_len, evt->data, copy_len);
+                        printf("%.*s\n",output_len,(char *)evt->user_data);
+                        cjson_weather_info((char *)evt->user_data);
+                    }
+                } else {
+                    const int buffer_len = esp_http_client_get_content_length(evt->client);
+                    if (output_buffer == NULL) {
+                        output_buffer = (char *) malloc(buffer_len);
+                        output_len = 0;
+                        if (output_buffer == NULL) {
+                            ESP_LOGE(TAG, "Failed to allocate memory for output buffer");
+                            return ESP_FAIL;
+                        }
+                    }
+                    copy_len = MIN(evt->data_len, (buffer_len - output_len));
+                    if (copy_len) {
+                        memcpy(output_buffer + output_len, evt->data, copy_len);
+                        printf("%.*s\n", output_len, output_buffer);
+                        cjson_time_info((char*)output_buffer);
+                    }
+                }
+                output_len += copy_len;
+            }
 
             break;
         case HTTP_EVENT_ON_FINISH:
@@ -396,6 +481,41 @@ static void https_get_weather(void)
     } else {
         ESP_LOGE(TAG, "Error perform http request %s", esp_err_to_name(err));
     }
+    esp_http_client_cleanup(client);
+}
+
+static void http_get_time(void)
+{
+    char local_response_buffer[MAX_HTTP_OUTPUT_BUFFER] = {0};
+    /**
+     * NOTE: All the configuration parameters for http_client must be spefied either in URL or as host and path parameters.
+     * If host and path parameters are not set, query parameter will be ignored. In such cases,
+     * query parameter should be specified in URL.
+     *
+     * If URL as well as host and path parameters are specified, values of host and path will be considered.
+     */
+    esp_http_client_config_t config = {
+        // .host = CONFIG_EXAMPLE_HTTP_ENDPOINT,
+        .method = HTTP_METHOD_GET, //get
+        .url = "http://quan.suning.com/getSysTime.do",
+        .event_handler = _http_time_event_handler,
+        .skip_cert_common_name_check = true,
+    };
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+
+    // GET
+    esp_err_t err = esp_http_client_perform(client);
+    if (err == ESP_OK) {
+        ESP_LOGI(TAG, "HTTP GET Status = %d, content_length = %"PRIu64,
+                esp_http_client_get_status_code(client),
+                esp_http_client_get_content_length(client));
+        esp_http_client_get_user_data(client,local_response_buffer);
+        printf("HTTP DATA = %s\n",local_response_buffer);
+    } else {
+        ESP_LOGE(TAG, "HTTP GET request failed: %s", esp_err_to_name(err));
+    }
+    // ESP_LOG_BUFFER_HEX(TAG, local_response_buffer, strlen(local_response_buffer));
+
     esp_http_client_cleanup(client);
 }
 
@@ -583,148 +703,6 @@ static void http_rest_with_hostname_path(void)
     esp_http_client_cleanup(client);
 }
 
-#if CONFIG_ESP_HTTP_CLIENT_ENABLE_BASIC_AUTH
-static void http_auth_basic(void)
-{
-    /**
-     * Note: `max_authorization_retries` in esp_http_client_config_t
-     * can be used to configure number of retry attempts to be performed
-     * in case unauthorized status code is received.
-     *
-     * To disable authorization retries, set max_authorization_retries to -1.
-     */
-    esp_http_client_config_t config = {
-        .url = "http://user:passwd@"CONFIG_EXAMPLE_HTTP_ENDPOINT"/basic-auth/user/passwd",
-        .event_handler = _http_event_handler,
-        .auth_type = HTTP_AUTH_TYPE_BASIC,
-        .max_authorization_retries = -1,
-    };
-    esp_http_client_handle_t client = esp_http_client_init(&config);
-    esp_err_t err = esp_http_client_perform(client);
-
-    if (err == ESP_OK) {
-        ESP_LOGI(TAG, "HTTP Basic Auth Status = %d, content_length = %"PRIu64,
-                esp_http_client_get_status_code(client),
-                esp_http_client_get_content_length(client));
-    } else {
-        ESP_LOGE(TAG, "Error perform http request %s", esp_err_to_name(err));
-    }
-    esp_http_client_cleanup(client);
-}
-
-static void http_auth_basic_redirect(void)
-{
-    esp_http_client_config_t config = {
-        .url = "http://user:passwd@"CONFIG_EXAMPLE_HTTP_ENDPOINT"/basic-auth/user/passwd",
-        .event_handler = _http_event_handler,
-    };
-    esp_http_client_handle_t client = esp_http_client_init(&config);
-    esp_err_t err = esp_http_client_perform(client);
-
-    if (err == ESP_OK) {
-        ESP_LOGI(TAG, "HTTP Basic Auth redirect Status = %d, content_length = %"PRIu64,
-                esp_http_client_get_status_code(client),
-                esp_http_client_get_content_length(client));
-    } else {
-        ESP_LOGE(TAG, "Error perform http request %s", esp_err_to_name(err));
-    }
-    esp_http_client_cleanup(client);
-}
-#endif
-
-#if CONFIG_ESP_HTTP_CLIENT_ENABLE_DIGEST_AUTH
-static void http_auth_digest(void)
-{
-    esp_http_client_config_t config = {
-        .url = "http://user:passwd@"CONFIG_EXAMPLE_HTTP_ENDPOINT"/digest-auth/auth/user/passwd/MD5/never",
-        .event_handler = _http_event_handler,
-    };
-    esp_http_client_handle_t client = esp_http_client_init(&config);
-    esp_err_t err = esp_http_client_perform(client);
-
-    if (err == ESP_OK) {
-        ESP_LOGI(TAG, "HTTP Digest Auth Status = %d, content_length = %"PRIu64,
-                esp_http_client_get_status_code(client),
-                esp_http_client_get_content_length(client));
-    } else {
-        ESP_LOGE(TAG, "Error perform http request %s", esp_err_to_name(err));
-    }
-    esp_http_client_cleanup(client);
-}
-#endif
-
-#if CONFIG_MBEDTLS_CERTIFICATE_BUNDLE
-static void https_with_url(void)
-{
-    esp_http_client_config_t config = {
-        .url = "https://www.howsmyssl.com",
-        .event_handler = _http_event_handler,
-        .crt_bundle_attach = esp_crt_bundle_attach,
-    };
-    esp_http_client_handle_t client = esp_http_client_init(&config);
-    esp_err_t err = esp_http_client_perform(client);
-
-    if (err == ESP_OK) {
-        ESP_LOGI(TAG, "HTTPS Status = %d, content_length = %"PRIu64,
-                esp_http_client_get_status_code(client),
-                esp_http_client_get_content_length(client));
-    } else {
-        ESP_LOGE(TAG, "Error perform http request %s", esp_err_to_name(err));
-    }
-    esp_http_client_cleanup(client);
-}
-#endif // CONFIG_MBEDTLS_CERTIFICATE_BUNDLE
-
-// static void https_with_hostname_path(void)
-// {
-//     esp_http_client_config_t config = {
-//         .host = "www.howsmyssl.com",
-//         .path = "/",
-//         .transport_type = HTTP_TRANSPORT_OVER_SSL,
-//         .event_handler = _http_event_handler,
-//         .cert_pem = howsmyssl_com_root_cert_pem_start,
-//     };
-//     esp_http_client_handle_t client = esp_http_client_init(&config);
-//     esp_err_t err = esp_http_client_perform(client);
-
-//     if (err == ESP_OK) {
-//         ESP_LOGI(TAG, "HTTPS Status = %d, content_length = %"PRIu64,
-//                 esp_http_client_get_status_code(client),
-//                 esp_http_client_get_content_length(client));
-//     } else {
-//         ESP_LOGE(TAG, "Error perform http request %s", esp_err_to_name(err));
-//     }
-//     esp_http_client_cleanup(client);
-// }
-
-// static void http_encoded_query(void)
-// {
-//     esp_http_client_config_t config = {
-//         .host = CONFIG_EXAMPLE_HTTP_ENDPOINT,
-//         .path = "/get",
-//         .event_handler = _http_event_handler,
-//     };
-
-//     static const char query_val[] = "ABC xyz!012@#%&";
-//     char query_val_enc[64] = {0};
-
-//     uint32_t enc_len = example_uri_encode(query_val_enc, query_val, strlen(query_val));
-//     if (enc_len > 0) {
-//         ESP_LOG_BUFFER_HEXDUMP(TAG, query_val_enc, enc_len, ESP_LOG_DEBUG);
-//         config.query = query_val_enc;
-//     }
-
-//     esp_http_client_handle_t client = esp_http_client_init(&config);
-//     esp_err_t err = esp_http_client_perform(client);
-//     if (err == ESP_OK) {
-//         ESP_LOGI(TAG, "HTTP GET Status = %d, content_length = %"PRIu64,
-//                 esp_http_client_get_status_code(client),
-//                 esp_http_client_get_content_length(client));
-//     } else {
-//         ESP_LOGE(TAG, "HTTP GET request failed: %s", esp_err_to_name(err));
-//     }
-// }
-
 static void http_relative_redirect(void)
 {
     esp_http_client_config_t config = {
@@ -783,27 +761,6 @@ static void http_absolute_redirect_manual(void)
     esp_http_client_cleanup(client);
 }
 
-// static void http_redirect_to_https(void)
-// {
-//     esp_http_client_config_t config = {
-//         .url = "http://"CONFIG_EXAMPLE_HTTP_ENDPOINT"/redirect-to?url=https://www.howsmyssl.com",
-//         .event_handler = _http_event_handler,
-//         .cert_pem = howsmyssl_com_root_cert_pem_start,
-//     };
-//     esp_http_client_handle_t client = esp_http_client_init(&config);
-//     esp_err_t err = esp_http_client_perform(client);
-
-//     if (err == ESP_OK) {
-//         ESP_LOGI(TAG, "HTTP redirect to HTTPS Status = %d, content_length = %"PRIu64,
-//                 esp_http_client_get_status_code(client),
-//                 esp_http_client_get_content_length(client));
-//     } else {
-//         ESP_LOGE(TAG, "Error perform http request %s", esp_err_to_name(err));
-//     }
-//     esp_http_client_cleanup(client);
-// }
-
-
 static void http_download_chunk(void)
 {
     esp_http_client_config_t config = {
@@ -857,39 +814,6 @@ static void http_perform_as_stream_reader(void)
     esp_http_client_cleanup(client);
     free(buffer);
 }
-
-// static void https_async(void)
-// {
-//     esp_http_client_config_t config = {
-//         .url = "https://postman-echo.com/post",
-//         .event_handler = _http_event_handler,
-//         .cert_pem = postman_root_cert_pem_start,
-//         .is_async = true,
-//         .timeout_ms = 5000,
-//     };
-//     esp_http_client_handle_t client = esp_http_client_init(&config);
-//     esp_err_t err;
-//     const char *post_data = "Using a Palantír requires a person with great strength of will and wisdom. The Palantíri were meant to "
-//                             "be used by the Dúnedain to communicate throughout the Realms in Exile. During the War of the Ring, "
-//                             "the Palantíri were used by many individuals. Sauron used the Ithil-stone to take advantage of the users "
-//                             "of the other two stones, the Orthanc-stone and Anor-stone, but was also susceptible to deception himself.";
-//     esp_http_client_set_method(client, HTTP_METHOD_POST);
-//     esp_http_client_set_post_field(client, post_data, strlen(post_data));
-//     while (1) {
-//         err = esp_http_client_perform(client);
-//         if (err != ESP_ERR_HTTP_EAGAIN) {
-//             break;
-//         }
-//     }
-//     if (err == ESP_OK) {
-//         ESP_LOGI(TAG, "HTTPS Status = %d, content_length = %"PRIu64,
-//                 esp_http_client_get_status_code(client),
-//                 esp_http_client_get_content_length(client));
-//     } else {
-//         ESP_LOGE(TAG, "Error perform http request %s", esp_err_to_name(err));
-//     }
-//     esp_http_client_cleanup(client);
-// }
 
 static void https_with_invalid_url(void)
 {
@@ -979,118 +903,43 @@ static void http_native_request(void)
     esp_http_client_cleanup(client);
 }
 
-#if CONFIG_MBEDTLS_CERTIFICATE_BUNDLE
-static void http_partial_download(void)
-{
-    esp_http_client_config_t config = {
-        .url = "https://dl.espressif.com/dl/esp-idf/ci/esp_http_client_demo.txt",
-        .event_handler = _http_event_handler,
-        .crt_bundle_attach = esp_crt_bundle_attach,
-    };
-    esp_http_client_handle_t client = esp_http_client_init(&config);
-
-    // Download a file excluding first 10 bytes
-    esp_http_client_set_header(client, "Range", "bytes=10-");
-    esp_err_t err = esp_http_client_perform(client);
-    if (err == ESP_OK) {
-        ESP_LOGI(TAG, "HTTP Status = %d, content_length = %"PRIu64,
-                esp_http_client_get_status_code(client),
-                esp_http_client_get_content_length(client));
-    } else {
-        ESP_LOGE(TAG, "HTTP request failed: %s", esp_err_to_name(err));
-    }
-
-    // Download last 10 bytes of a file
-    esp_http_client_set_header(client, "Range", "bytes=-10");
-    err = esp_http_client_perform(client);
-    if (err == ESP_OK) {
-        ESP_LOGI(TAG, "HTTP Status = %d, content_length = %"PRIu64,
-                esp_http_client_get_status_code(client),
-                esp_http_client_get_content_length(client));
-    } else {
-        ESP_LOGE(TAG, "HTTP request failed: %s", esp_err_to_name(err));
-    }
-
-    // Download 10 bytes from 11 to 20
-    esp_http_client_set_header(client, "Range", "bytes=11-20");
-    err = esp_http_client_perform(client);
-    if (err == ESP_OK) {
-        ESP_LOGI(TAG, "HTTP Status = %d, content_length = %"PRIu64,
-                esp_http_client_get_status_code(client),
-                esp_http_client_get_content_length(client));
-    } else {
-        ESP_LOGE(TAG, "HTTP request failed: %s", esp_err_to_name(err));
-    }
-
-    esp_http_client_cleanup(client);
-}
-#endif // CONFIG_MBEDTLS_CERTIFICATE_BUNDLE
-
 static void http_test_task(void *pvParameters)
 {
+    HTTP_REQUEST_TYPE_E evt;
     while(1)
     {
+        xQueueReceive(http_request_queue, &evt, portMAX_DELAY);
+        switch (evt)
+        {
+        case HTTP_GET_TIME:
+            http_get_time();
+            break;
+        
+        case HTTP_GET_WEATHER:
+            https_get_weather();
+            break;
+
+        default:
+            break;
+        }
         // http_rest_with_url();
-        https_get_weather();
-        vTaskDelay(5000 / portTICK_PERIOD_MS); 
     }
 
-#if 0
-    http_rest_with_hostname_path();
-#if CONFIG_ESP_HTTP_CLIENT_ENABLE_BASIC_AUTH
-    http_auth_basic();
-    http_auth_basic_redirect();
-#endif
-#if CONFIG_ESP_HTTP_CLIENT_ENABLE_DIGEST_AUTH
-    http_auth_digest();
-#endif
-    http_encoded_query();
-    http_relative_redirect();
-    http_absolute_redirect();
-    http_absolute_redirect_manual();
-#if CONFIG_MBEDTLS_CERTIFICATE_BUNDLE
-    https_with_url();
-#endif
-    https_with_hostname_path();
-    http_redirect_to_https();
-    http_download_chunk();
-    http_perform_as_stream_reader();
-    https_async();
-    https_with_invalid_url();
-    http_native_request();
-#if CONFIG_MBEDTLS_CERTIFICATE_BUNDLE
-    http_partial_download();
-#endif
-
-    ESP_LOGI(TAG, "Finish http example");
-#if !CONFIG_IDF_TARGET_LINUX
-    vTaskDelete(NULL);
-#endif
-#endif
 }
 
 void http_client_init(void)
 {
-    // esp_err_t ret = nvs_flash_init();
-    // if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-    //   ESP_ERROR_CHECK(nvs_flash_erase());
-    //   ret = nvs_flash_init();
-    // }
-    // ESP_ERROR_CHECK(ret);
-
-    // ESP_ERROR_CHECK(esp_netif_init());
-    // ESP_ERROR_CHECK(esp_event_loop_create_default());
-
-    // /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
-    //  * Read "Establishing Wi-Fi or Ethernet Connection" section in
-    //  * examples/protocols/README.md for more information about this function.
-    //  */
-    // ESP_ERROR_CHECK(example_connect());
-    ESP_LOGI(TAG, "Connected to AP, begin http example");
+    ESP_LOGI(TAG, "Connected to AP, begin http request");
 
 #if CONFIG_IDF_TARGET_LINUX
     http_test_task(NULL);
 #else
-    // xTaskCreate(&http_test_task, "http_test_task", 8192, NULL, 5, NULL);
+    
+    http_request_queue = xQueueCreate(10, sizeof(HTTP_REQUEST_TYPE_E));
+    if (!http_request_queue) {
+        ESP_LOGE(TAG, "Creating http_request_queue failed");
+        return;
+    }
+    xTaskCreate(&http_test_task, "http_test_task", TASK_HTTP_REQUEST_STACKSIZE, NULL, TASK_HTTP_REQUEST_PRIORITY, NULL);
 #endif
 }

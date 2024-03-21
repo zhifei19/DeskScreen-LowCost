@@ -71,7 +71,7 @@ void ds_timer_init(void)
 {
     timer_queue = xQueueCreate(10, sizeof(timer_queue_element_t));
     if (!timer_queue) {
-        ESP_LOGE(TAG, "Creating queue failed");
+        ESP_LOGE(TAG, "Creating timer_queue failed");
         return;
     }
 
