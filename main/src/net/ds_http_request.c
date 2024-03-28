@@ -458,7 +458,7 @@ static void http_get_weather(void)
                 esp_http_client_get_status_code(client),
                 esp_http_client_get_content_length(client));
         esp_http_client_get_user_data(client,local_response_buffer);
-        printf("HTTP DATA = %s\n",local_response_buffer);
+        // printf("HTTP DATA = %s\n",local_response_buffer);
     } else {
         ESP_LOGE(TAG, "HTTP GET request failed: %s", esp_err_to_name(err));
     }
@@ -514,7 +514,7 @@ static void http_get_time(void)
                 esp_http_client_get_status_code(client),
                 esp_http_client_get_content_length(client));
         esp_http_client_get_user_data(client,local_response_buffer);
-        printf("HTTP DATA = %s\n",local_response_buffer);
+        // printf("HTTP DATA = %s\n",local_response_buffer);
     } else {
         ESP_LOGE(TAG, "HTTP GET request failed: %s", esp_err_to_name(err));
     }

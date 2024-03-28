@@ -8,7 +8,7 @@
 #include "ds_ui_page_manage.h"
 #include "ds_conf.h"
 
-static SYSTEM_DATA_T sysdata_handler;
+SYSTEM_DATA_T sysdata_handler;
 
 static const char *TAG = "ds_system_data";
 
@@ -22,9 +22,6 @@ void sysdata_init(char *p_ssid, uint32_t p_ssidlen, char *p_password, uint32_t p
 
 SYSTEM_DATA_T sysdata_get()
 {
-    ESP_LOGI(TAG, "sysdata_get().hour is %s\n",sysdata_handler.hour);
-    ESP_LOGI(TAG, "sysdata_get().password is %s\n",sysdata_handler.password);
-    ESP_LOGI(TAG, "sysdata_get().test is %d\n",sysdata_handler.test);
     return sysdata_handler;
 }
 
@@ -41,12 +38,8 @@ void sysdata_set_wifi_info(char *p_ssid, uint32_t p_ssidlen, char *p_password, u
 
 void sysdata_print_wifi_info()
 {
-    ESP_LOGI(TAG,"WIFI SSID:");
-    printf("\r\nwifi_SSID:");
-    printf("%s\n",sysdata_handler.ssid);
-    ESP_LOGI(TAG,"WIFI Password:");
-    printf("\r\nwifi_Password:");
-    printf("%s\n",sysdata_handler.password);
+    ESP_LOGI(TAG,"WIFI SSID:%s\n",sysdata_handler.ssid);
+    ESP_LOGI(TAG,"WIFI Password:%s\n",sysdata_handler.password);
     printf("\r\n");
 }
 
@@ -60,7 +53,7 @@ SETTING_DATA_E sysdata_check_wifi_info()
 
 void reset_tp_action_manage(void)
 {
-    memset(&sysdata_handler,0,sizeof(SYSTEM_DATA_T));
+    memset(&sysdata_handler.tp_action_manage,0,sizeof(TP_ACTION_MANAGE_T));
     printf("reset_tp_action_manage\n");
 
     sysdata_handler.tp_action_manage.status = 1;

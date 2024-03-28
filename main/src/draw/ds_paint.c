@@ -78,12 +78,10 @@
 #include "ds_screen.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "ds_conf.h"
 
 #include "ds_data_image.h"
 
-#define EPD_2IN9BC_WIDTH       200
-#define EPD_2IN9BC_HEIGHT      200
-#define IMAGE_SIZE (((EPD_2IN9BC_WIDTH % 8 == 0) ? (EPD_2IN9BC_WIDTH / 8 ) : (EPD_2IN9BC_WIDTH / 8 + 1)) * EPD_2IN9BC_HEIGHT)
 
 static const char *TAG = "ds_paint";
 
@@ -1020,8 +1018,6 @@ void ds_ui_show_test(){
 
 
     // Paint_DrawCircle(150,150,10,BLACK,5,DRAW_FILL_FULL);
-    // Paint_DrawString_CN(50, 80, "hello", WHITE,BLACK);
-    // Paint_DrawString_CN(50, 110, "你好", WHITE,BLACK);
     Paint_DrawString_CN(50, 110, "12", WHITE,BLACK);
     Paint_DrawBitMap_Paste(gImage_back, 0, 0, 40, 40, BLACK);
     Paint_DrawBitMap_Paste(gImage_colon, 100, 100, 8, 40, BLACK);

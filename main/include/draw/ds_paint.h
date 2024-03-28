@@ -214,6 +214,7 @@ void Paint_DrawCircle(UWORD X_Center, UWORD Y_Center, UWORD Radius, UWORD Color,
 
 //pic
 void Paint_DrawBitMap(const unsigned char* image_buffer);
+void Paint_DrawBitMap_Paste(const unsigned char* image_buffer, UWORD xStart, UWORD yStart, UWORD imageWidth, UWORD imageHeight, UBYTE flipColor);
 
 void ds_paint_image(void);
 void ds_ui_show_test(void);

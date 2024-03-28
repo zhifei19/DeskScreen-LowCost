@@ -90,9 +90,9 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-    nvs_init();
-
     sysdata_init(ssid, strlen(ssid), password, strlen(password));
+
+    nvs_init();
 
     ft6336_init();
 
